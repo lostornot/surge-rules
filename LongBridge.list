@@ -1,0 +1,17 @@
+# NAME: LongBridge
+# UPDATED: 2026-06-18
+# SOURCE: https://raw.githubusercontent.com/Arthur-vx/broker-rules/main/rule/Shadowrocket/Broker/Broker.list
+
+DOMAIN-SUFFIX,longbridge.com,LongBridge
+DOMAIN-SUFFIX,longbridge.hk,LongBridge
+DOMAIN-SUFFIX,longbridge.sg,LongBridge
+DOMAIN-SUFFIX,longbridge.cn,LongBridge
+DOMAIN-SUFFIX,longbridge.global,LongBridge
+DOMAIN-SUFFIX,longbridge.cloud,LongBridge
+DOMAIN-SUFFIX,longbridgeapp.com,LongBridge
+DOMAIN-SUFFIX,longbridgehk.com,LongBridge
+DOMAIN-SUFFIX,longportapp.com,LongBridge
+DOMAIN-SUFFIX,longportapp.cn,LongBridge
+DOMAIN-SUFFIX,lbkrs.com,LongBridge
+DOMAIN-SUFFIX,lbctrl.com,LongBridge
+DOMAIN-SUFFIX,wbrks.com,LongBridge
