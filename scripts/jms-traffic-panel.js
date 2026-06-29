@@ -47,7 +47,7 @@ function parseQueryLikeArgument(arg) {
   const result = {};
   if (!arg || arg.indexOf("=") === -1) return result;
 
-  arg.split("&").forEach(pair => {
+  arg.split(/[&;\n]/).forEach(pair => {
     const idx = pair.indexOf("=");
     if (idx === -1) return;
     const key = pair.slice(0, idx).trim();
