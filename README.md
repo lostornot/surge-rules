@@ -26,7 +26,7 @@ https://raw.githubusercontent.com/lostornot/surge-rules/main/modules/jms-traffic
 如果面板显示“模块参数占位符未被替换”，说明当前 Surge 没有把模块参数传给脚本。可以用 Safari 打开下面的本地设置链接，把 API URL 保存到 Surge 本地存储：
 
 ```text
-http://jms-panel.local/set?url=你的JMS API链接
+http://jms-panel.test/set?url=你的JMS API链接
 ```
 
 保存成功后回到 Surge，刷新「JMS流量」面板即可。
