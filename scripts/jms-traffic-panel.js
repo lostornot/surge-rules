@@ -160,13 +160,13 @@ function html(title, body) {
 function handleSetupRequest() {
   const url = String($request.url || "");
 
-  if (/^http:\/\/jms-panel\.local\/clear/i.test(url)) {
+  if (/^http:\/\/jms-panel\.test\/clear/i.test(url)) {
     const ok = clearApiUrl();
     response(200, html("JMS 流量面板", `<h2 class="${ok ? "ok" : "bad"}">${ok ? "已清除" : "清除失败"}</h2><p>现在可以重新保存 API URL。</p>`));
     return;
   }
 
-  if (/^http:\/\/jms-panel\.local\/show/i.test(url)) {
+  if (/^http:\/\/jms-panel\.test\/show/i.test(url)) {
     const saved = getApiUrlFromStore();
     response(200, html("JMS 流量面板", `<h2>当前状态</h2><p>${saved ? "已保存 API URL" : "未保存 API URL"}</p><p><code>${maskUrl(saved)}</code></p>`));
     return;
@@ -178,7 +178,7 @@ function handleSetupRequest() {
   const apiUrl = extractApiUrlFromString(raw);
 
   if (!apiUrl) {
-    response(400, html("JMS 流量面板", `<h2 class="bad">没有识别到 API URL</h2><p>请使用：</p><p><code>http://jms-panel.local/set?url=你的JMS API链接</code></p>`));
+    response(400, html("JMS 流量面板", `<h2 class="bad">没有识别到 API URL</h2><p>请使用：</p><p><code>http://jms-panel.test/set?url=你的JMS API链接</code></p>`));
     return;
   }
 
@@ -198,7 +198,7 @@ function renderPanel() {
         "未读取到 JMS API URL。",
         "请先尝试填写模块参数 JMS_API_URL。",
         "如果显示占位符未替换，请用 Safari 打开：",
-        "http://jms-panel.local/set?url=你的JMS API链接",
+        "http://jms-panel.test/set?url=你的JMS API链接",
         `当前参数：${shortArgForDebug()}`,
         `更新：${nowText()}`
       ].join("\n"),

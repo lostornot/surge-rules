@@ -122,7 +122,7 @@ test("falls back to locally saved URL when module argument placeholder is not re
 test("setup request saves API URL to persistent store", () => {
   const apiUrl = "https://justmysocks.example/members/getbwcounter.php?service=1397602&id=f488";
   const { donePayload, written } = runSetup({
-    requestUrl: `http://jms-panel.local/set?url=${apiUrl}`
+    requestUrl: `http://jms-panel.test/set?url=${apiUrl}`
   });
 
   assert.strictEqual(written, apiUrl);
@@ -165,7 +165,8 @@ test("module declares JMS_API_URL argument and exposes setup fallback endpoint",
   const moduleSource = fs.readFileSync(modulePath, "utf8");
 
   assert.match(moduleSource, /^#!arguments=JMS_API_URL=/m);
+  assert.match(moduleSource, /\[Host\]\njms-panel\.test = 198\.18\.0\.1/);
   assert.match(moduleSource, /argument="JMS_API_URL=%JMS_API_URL%"/);
-  assert.match(moduleSource, /jms-panel\\\.local/);
+  assert.match(moduleSource, /jms-panel\\\.test/);
   assert.match(moduleSource, /type=http-request/);
 });
