@@ -23,6 +23,24 @@ function nowText() {
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function decodeMaybe(value) {
+  let current = String(value || "").trim();
+  for (let i = 0; i < 2; i++) {
+    try {
+      const decoded = decodeURIComponent(current);
+      if (decoded === current) break;
+      current = decoded;
+    } catch (_) {
+      break;
+    }
+  }
+  return current.trim();
+}
+
+function looksLikeUrl(value) {
+  return /^https?:\/\//i.test(String(value || "").trim());
+}
+
 function parseQueryLikeArgument(arg) {
   const result = {};
   if (!arg || arg.indexOf("=") === -1) return result;
@@ -32,11 +50,7 @@ function parseQueryLikeArgument(arg) {
     if (idx === -1) return;
     const key = pair.slice(0, idx).trim();
     const value = pair.slice(idx + 1).trim();
-    try {
-      result[key] = decodeURIComponent(value);
-    } catch (_) {
-      result[key] = value;
-    }
+    result[key] = decodeMaybe(value);
   });
 
   return result;
@@ -46,21 +60,38 @@ function getApiUrl() {
   const arg = String($argument || "").trim();
   if (!arg) return "";
 
-  // Preferred mode: argument is the raw JMS API URL.
-  if (/^https?:\/\//i.test(arg)) return arg;
+  // Mode 1: argument is the raw JMS API URL.
+  if (looksLikeUrl(arg)) return arg;
 
-  // Compatible mode: argument is JMS_API_URL=<urlencoded url> or API_URL=<urlencoded url>.
+  // Mode 2: argument is URL-encoded as a whole.
+  const decodedWhole = decodeMaybe(arg);
+  if (looksLikeUrl(decodedWhole)) return decodedWhole;
+
+  // Mode 3: argument is explicitly keyed by the module:
+  // JMS_API_URL=<raw-or-encoded-url>
+  // Important: take everything after the first '=' so raw URLs with '&' are preserved.
+  const prefixes = ["JMS_API_URL=", "API_URL="];
+  for (const prefix of prefixes) {
+    if (arg.indexOf(prefix) === 0) {
+      const value = decodeMaybe(arg.slice(prefix.length));
+      if (looksLikeUrl(value)) return value;
+    }
+  }
+
+  // Mode 4: fallback parser for simple query-string arguments.
   const parsed = parseQueryLikeArgument(arg);
   const url = parsed.JMS_API_URL || parsed.API_URL || "";
-  if (/^https?:\/\//i.test(url)) return url;
-
-  // Last attempt: maybe the whole argument itself is URL-encoded.
-  try {
-    const decoded = decodeURIComponent(arg);
-    if (/^https?:\/\//i.test(decoded)) return decoded;
-  } catch (_) {}
+  if (looksLikeUrl(url)) return url;
 
   return "";
+}
+
+function shortArgForDebug() {
+  const arg = String($argument || "").trim();
+  if (!arg) return "空";
+  if (arg.indexOf("%JMS_API_URL%") !== -1) return "模块参数占位符未被替换";
+  if (arg.length <= 80) return arg;
+  return `${arg.slice(0, 32)}...${arg.slice(-16)}，长度 ${arg.length}`;
 }
 
 function donePanel(title, content, style, icon) {
@@ -75,7 +106,12 @@ const API_URL = getApiUrl();
 if (!API_URL) {
   donePanel(
     "JMS 流量",
-    "未配置 JMS API URL\n请在模块参数 JMS_API_URL 中填入后台的 Bandwidth Counter API 链接。",
+    [
+      "未读取到 JMS API URL。",
+      "请确认模块参数 JMS_API_URL 已填写；如果刚更新模块，请删除旧模块后重新安装。",
+      `当前参数：${shortArgForDebug()}`,
+      `更新：${nowText()}`
+    ].join("\n"),
     "error",
     "exclamationmark.triangle.fill"
   );
