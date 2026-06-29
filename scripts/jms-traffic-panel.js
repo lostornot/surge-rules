@@ -1,6 +1,8 @@
 // JMS Traffic Panel for Surge
 // Reads the Just My Socks bandwidth counter API and renders it as a Surge Information Panel.
-// The API URL should be passed via $argument. Do NOT hard-code your real API URL in a public repository.
+// The API URL is stored locally in Surge $persistentStore. Do NOT hard-code your real API URL in a public repository.
+
+const STORE_KEY = "jms_traffic_panel_api_url";
 
 function toNumber(value) {
   const n = Number(value);
@@ -56,21 +58,16 @@ function parseQueryLikeArgument(arg) {
   return result;
 }
 
-function getApiUrl() {
-  const arg = String($argument || "").trim();
+function extractApiUrlFromString(input) {
+  const arg = String(input || "").trim();
   if (!arg) return "";
 
-  // Mode 1: argument is the raw JMS API URL.
   if (looksLikeUrl(arg)) return arg;
 
-  // Mode 2: argument is URL-encoded as a whole.
   const decodedWhole = decodeMaybe(arg);
   if (looksLikeUrl(decodedWhole)) return decodedWhole;
 
-  // Mode 3: argument is explicitly keyed by the module:
-  // jms_api_url=<raw-or-encoded-url>, JMS_API_URL=<...>, or API_URL=<...>
-  // Important: take everything after the first '=' so raw URLs with '&' are preserved.
-  const prefixes = ["jms_api_url=", "JMS_API_URL=", "API_URL="];
+  const prefixes = ["jms_api_url=", "JMS_API_URL=", "API_URL=", "url=", "api="];
   for (const prefix of prefixes) {
     if (arg.indexOf(prefix) === 0) {
       const value = decodeMaybe(arg.slice(prefix.length));
@@ -78,16 +75,55 @@ function getApiUrl() {
     }
   }
 
-  // Mode 4: fallback parser for simple query-string arguments.
   const parsed = parseQueryLikeArgument(arg);
-  const url = parsed.jms_api_url || parsed.JMS_API_URL || parsed.API_URL || "";
+  const url = parsed.jms_api_url || parsed.JMS_API_URL || parsed.API_URL || parsed.url || parsed.api || "";
   if (looksLikeUrl(url)) return url;
 
   return "";
 }
 
+function getApiUrlFromArgument() {
+  if (typeof $argument === "undefined") return "";
+  return extractApiUrlFromString($argument);
+}
+
+function getApiUrlFromStore() {
+  try {
+    const value = $persistentStore.read(STORE_KEY);
+    return extractApiUrlFromString(value);
+  } catch (_) {
+    return "";
+  }
+}
+
+function saveApiUrl(url) {
+  try {
+    return $persistentStore.write(url, STORE_KEY);
+  } catch (_) {
+    return false;
+  }
+}
+
+function clearApiUrl() {
+  try {
+    return $persistentStore.write("", STORE_KEY);
+  } catch (_) {
+    return false;
+  }
+}
+
+function maskUrl(url) {
+  const s = String(url || "");
+  if (!s) return "未设置";
+  if (s.length <= 40) return s;
+  return `${s.slice(0, 30)}...${s.slice(-12)}`;
+}
+
 function shortArgForDebug() {
-  const arg = String($argument || "").trim();
+  const storeUrl = getApiUrlFromStore();
+  if (storeUrl) return `已从本地存储读取：${maskUrl(storeUrl)}`;
+
+  const arg = typeof $argument === "undefined" ? "" : String($argument || "").trim();
   if (!arg) return "空";
   if (arg.indexOf("%JMS_API_URL%") !== -1 || arg.indexOf("%jms_api_url%") !== -1) return "模块参数占位符未被替换";
   if (arg.length <= 80) return arg;
@@ -101,28 +137,75 @@ function donePanel(title, content, style, icon) {
   $done(payload);
 }
 
-const API_URL = getApiUrl();
+function response(status, body) {
+  $done({
+    response: {
+      status: status,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+      body: body
+    }
+  });
+}
 
-if (!API_URL) {
-  donePanel(
-    "JMS 流量",
-    [
-      "未读取到 JMS API URL。",
-      "请确认模块参数 jms_api_url 已填写；如果刚更新模块，请删除旧模块后重新安装。",
-      `当前参数：${shortArgForDebug()}`,
-      `更新：${nowText()}`
-    ].join("\n"),
-    "error",
-    "exclamationmark.triangle.fill"
-  );
-} else {
+function html(title, body) {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:24px;line-height:1.55}code{word-break:break-all;background:#f3f3f3;padding:2px 4px;border-radius:4px}.ok{color:#16833a}.bad{color:#b00020}</style></head><body>${body}</body></html>`;
+}
+
+function handleSetupRequest() {
+  const url = String($request.url || "");
+
+  if (/^http:\/\/jms-panel\.local\/clear/i.test(url)) {
+    const ok = clearApiUrl();
+    response(200, html("JMS 流量面板", `<h2 class="${ok ? "ok" : "bad"}">${ok ? "已清除" : "清除失败"}</h2><p>现在可以重新打开设置链接保存 API URL。</p>`));
+    return;
+  }
+
+  if (/^http:\/\/jms-panel\.local\/show/i.test(url)) {
+    const saved = getApiUrlFromStore();
+    response(200, html("JMS 流量面板", `<h2>当前状态</h2><p>${saved ? "已保存 API URL" : "未保存 API URL"}</p><p><code>${maskUrl(saved)}</code></p>`));
+    return;
+  }
+
+  const marker = "/set?";
+  const idx = url.indexOf(marker);
+  const raw = idx >= 0 ? url.slice(idx + marker.length) : "";
+  const apiUrl = extractApiUrlFromString(raw);
+
+  if (!apiUrl) {
+    response(400, html("JMS 流量面板", `<h2 class="bad">没有识别到 API URL</h2><p>请使用：</p><p><code>http://jms-panel.local/set?你的JMS API链接</code></p>`));
+    return;
+  }
+
+  const ok = saveApiUrl(apiUrl);
+  response(200, html("JMS 流量面板", `<h2 class="${ok ? "ok" : "bad"}">${ok ? "保存成功" : "保存失败"}</h2><p>JMS API URL 已保存到 Surge 本地存储。</p><p><code>${maskUrl(apiUrl)}</code></p><p>回到 Surge 的策略选择页面，刷新「JMS流量」面板即可。</p>`));
+}
+
+function renderPanel() {
+  const API_URL = getApiUrlFromStore() || getApiUrlFromArgument();
+
+  if (!API_URL) {
+    donePanel(
+      "JMS 流量",
+      [
+        "未读取到 JMS API URL。",
+        "请先在 Safari 打开设置链接：",
+        "http://jms-panel.local/set?你的JMS API链接",
+        `当前参数：${shortArgForDebug()}`,
+        `更新：${nowText()}`
+      ].join("\n"),
+      "error",
+      "exclamationmark.triangle.fill"
+    );
+    return;
+  }
+
   $httpClient.get(
     {
       url: API_URL,
       timeout: 10,
       "auto-redirect": true
     },
-    function (error, response, data) {
+    function (error, responseObj, data) {
       if (error) {
         donePanel(
           "JMS 流量查询失败",
@@ -133,8 +216,8 @@ if (!API_URL) {
         return;
       }
 
-      const status = response ? response.status : "Unknown";
-      if (!response || status < 200 || status >= 300) {
+      const status = responseObj ? responseObj.status : "Unknown";
+      if (!responseObj || status < 200 || status >= 300) {
         donePanel(
           "JMS 流量查询失败",
           `HTTP ${status}\n${data ? String(data).slice(0, 160) : "无返回内容"}\n更新：${nowText()}`,
@@ -200,4 +283,10 @@ if (!API_URL) {
       donePanel(title, content, style, icon);
     }
   );
+}
+
+if (typeof $request !== "undefined") {
+  handleSetupRequest();
+} else {
+  renderPanel();
 }
