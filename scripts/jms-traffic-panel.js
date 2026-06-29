@@ -1,0 +1,167 @@
+// JMS Traffic Panel for Surge
+// Reads the Just My Socks bandwidth counter API and renders it as a Surge Information Panel.
+// The API URL should be passed via $argument. Do NOT hard-code your real API URL in a public repository.
+
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function decimalGB(bytes) {
+  return bytes / 1000000000;
+}
+
+function formatGB(value) {
+  if (!Number.isFinite(value)) return "未知";
+  if (value >= 100) return `${value.toFixed(1)} GB`;
+  return `${value.toFixed(2)} GB`;
+}
+
+function nowText() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function parseQueryLikeArgument(arg) {
+  const result = {};
+  if (!arg || arg.indexOf("=") === -1) return result;
+
+  arg.split("&").forEach(pair => {
+    const idx = pair.indexOf("=");
+    if (idx === -1) return;
+    const key = pair.slice(0, idx).trim();
+    const value = pair.slice(idx + 1).trim();
+    try {
+      result[key] = decodeURIComponent(value);
+    } catch (_) {
+      result[key] = value;
+    }
+  });
+
+  return result;
+}
+
+function getApiUrl() {
+  const arg = String($argument || "").trim();
+  if (!arg) return "";
+
+  // Preferred mode: argument is the raw JMS API URL.
+  if (/^https?:\/\//i.test(arg)) return arg;
+
+  // Compatible mode: argument is JMS_API_URL=<urlencoded url> or API_URL=<urlencoded url>.
+  const parsed = parseQueryLikeArgument(arg);
+  const url = parsed.JMS_API_URL || parsed.API_URL || "";
+  if (/^https?:\/\//i.test(url)) return url;
+
+  // Last attempt: maybe the whole argument itself is URL-encoded.
+  try {
+    const decoded = decodeURIComponent(arg);
+    if (/^https?:\/\//i.test(decoded)) return decoded;
+  } catch (_) {}
+
+  return "";
+}
+
+function donePanel(title, content, style, icon) {
+  const payload = { title, content };
+  if (style) payload.style = style;
+  if (icon) payload.icon = icon;
+  $done(payload);
+}
+
+const API_URL = getApiUrl();
+
+if (!API_URL) {
+  donePanel(
+    "JMS 流量",
+    "未配置 JMS API URL\n请在模块参数 JMS_API_URL 中填入后台的 Bandwidth Counter API 链接。",
+    "error",
+    "exclamationmark.triangle.fill"
+  );
+} else {
+  $httpClient.get(
+    {
+      url: API_URL,
+      timeout: 10,
+      "auto-redirect": true
+    },
+    function (error, response, data) {
+      if (error) {
+        donePanel(
+          "JMS 流量查询失败",
+          `请求失败：${String(error)}\n更新：${nowText()}`,
+          "error",
+          "wifi.exclamationmark"
+        );
+        return;
+      }
+
+      const status = response ? response.status : "Unknown";
+      if (!response || status < 200 || status >= 300) {
+        donePanel(
+          "JMS 流量查询失败",
+          `HTTP ${status}\n${data ? String(data).slice(0, 160) : "无返回内容"}\n更新：${nowText()}`,
+          "error",
+          "xmark.octagon.fill"
+        );
+        return;
+      }
+
+      let json;
+      try {
+        json = JSON.parse(data);
+      } catch (_) {
+        donePanel(
+          "JMS 流量查询失败",
+          `返回内容不是 JSON\n${data ? String(data).slice(0, 160) : "空响应"}\n更新：${nowText()}`,
+          "error",
+          "curlybraces"
+        );
+        return;
+      }
+
+      const totalBytes = toNumber(json.monthly_bw_limit_b);
+      const usedBytes = toNumber(json.bw_counter_b);
+      const resetDay = json.bw_reset_day_of_month || "未知";
+
+      if (!Number.isFinite(totalBytes) || totalBytes <= 0 || !Number.isFinite(usedBytes)) {
+        donePanel(
+          "JMS 流量查询失败",
+          `缺少流量字段\n${JSON.stringify(json).slice(0, 180)}\n更新：${nowText()}`,
+          "error",
+          "questionmark.app.fill"
+        );
+        return;
+      }
+
+      const totalGB = decimalGB(totalBytes);
+      const usedGB = decimalGB(usedBytes);
+      const leftGB = Math.max(totalGB - usedGB, 0);
+      const percent = usedGB / totalGB * 100;
+
+      let style = "good";
+      let icon = "gauge.with.dots.needle.33percent";
+      if (percent >= 90) {
+        style = "error";
+        icon = "gauge.with.dots.needle.100percent";
+      } else if (percent >= 80) {
+        style = "alert";
+        icon = "gauge.with.dots.needle.67percent";
+      } else if (percent >= 60) {
+        style = "info";
+        icon = "gauge.with.dots.needle.50percent";
+      }
+
+      const title = `JMS 流量｜剩余 ${formatGB(leftGB)}`;
+      const content = [
+        `已用：${formatGB(usedGB)} / ${formatGB(totalGB)}（${percent.toFixed(1)}%）`,
+        `剩余：${formatGB(leftGB)}`,
+        `重置：每月 ${resetDay} 日`,
+        `更新：${nowText()}`
+      ].join("\n");
+
+      donePanel(title, content, style, icon);
+    }
+  );
+}
