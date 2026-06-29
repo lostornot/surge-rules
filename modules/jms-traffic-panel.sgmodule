@@ -1,0 +1,10 @@
+#!name=JMS 流量面板
+#!desc=在 Surge 信息面板中显示 Just My Socks 当前周期流量、剩余流量、使用率和重置日。不发通知。
+#!system=ios
+#!arguments=JMS_API_URL=
+
+[Panel]
+JMS流量 = title="JMS 流量",content="点击刷新查询 Just My Socks 流量",style=info,script-name=jms-traffic-panel,update-interval=3600
+
+[Script]
+jms-traffic-panel = type=generic,timeout=20,script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/jms-traffic-panel.js,argument="%JMS_API_URL%"
