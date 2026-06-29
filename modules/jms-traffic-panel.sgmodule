@@ -7,4 +7,4 @@
 JMS流量 = title="JMS 流量",content="点击刷新查询 Just My Socks 流量",style=info,script-name=jms-traffic-panel,update-interval=3600
 
 [Script]
-jms-traffic-panel = type=generic,timeout=20,script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/jms-traffic-panel.js,argument="%JMS_API_URL%"
+jms-traffic-panel = type=generic,timeout=20,script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/jms-traffic-panel.js,argument="JMS_API_URL=%JMS_API_URL%"
