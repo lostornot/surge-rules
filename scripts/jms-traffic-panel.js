@@ -20,7 +20,7 @@ function formatGB(value) {
 function nowText() {
   const d = new Date();
   const pad = n => String(n).padStart(2, "0");
-  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())}:${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function decodeMaybe(value) {
@@ -68,9 +68,9 @@ function getApiUrl() {
   if (looksLikeUrl(decodedWhole)) return decodedWhole;
 
   // Mode 3: argument is explicitly keyed by the module:
-  // JMS_API_URL=<raw-or-encoded-url>
+  // jms_api_url=<raw-or-encoded-url>, JMS_API_URL=<...>, or API_URL=<...>
   // Important: take everything after the first '=' so raw URLs with '&' are preserved.
-  const prefixes = ["JMS_API_URL=", "API_URL="];
+  const prefixes = ["jms_api_url=", "JMS_API_URL=", "API_URL="];
   for (const prefix of prefixes) {
     if (arg.indexOf(prefix) === 0) {
       const value = decodeMaybe(arg.slice(prefix.length));
@@ -80,7 +80,7 @@ function getApiUrl() {
 
   // Mode 4: fallback parser for simple query-string arguments.
   const parsed = parseQueryLikeArgument(arg);
-  const url = parsed.JMS_API_URL || parsed.API_URL || "";
+  const url = parsed.jms_api_url || parsed.JMS_API_URL || parsed.API_URL || "";
   if (looksLikeUrl(url)) return url;
 
   return "";
@@ -89,7 +89,7 @@ function getApiUrl() {
 function shortArgForDebug() {
   const arg = String($argument || "").trim();
   if (!arg) return "空";
-  if (arg.indexOf("%JMS_API_URL%") !== -1) return "模块参数占位符未被替换";
+  if (arg.indexOf("%JMS_API_URL%") !== -1 || arg.indexOf("%jms_api_url%") !== -1) return "模块参数占位符未被替换";
   if (arg.length <= 80) return arg;
   return `${arg.slice(0, 32)}...${arg.slice(-16)}，长度 ${arg.length}`;
 }
@@ -108,7 +108,7 @@ if (!API_URL) {
     "JMS 流量",
     [
       "未读取到 JMS API URL。",
-      "请确认模块参数 JMS_API_URL 已填写；如果刚更新模块，请删除旧模块后重新安装。",
+      "请确认模块参数 jms_api_url 已填写；如果刚更新模块，请删除旧模块后重新安装。",
       `当前参数：${shortArgForDebug()}`,
       `更新：${nowText()}`
     ].join("\n"),
