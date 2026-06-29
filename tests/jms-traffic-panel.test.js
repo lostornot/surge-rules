@@ -108,6 +108,17 @@ test("keeps unencoded ampersands inside module API URL", () => {
   assert.strictEqual(requestedUrl, apiUrl);
 });
 
+test("builds API URL from separate service and id arguments", () => {
+  const { requestedUrl } = runPanel({
+    argument: "JMS_SERVICE=1397602&JMS_ID=f488c8e5-d546-4145-b407-9e3c2ee89281"
+  });
+
+  assert.strictEqual(
+    requestedUrl,
+    "https://justmysocks6.net/members/getbwcounter.php?service=1397602&id=f488c8e5-d546-4145-b407-9e3c2ee89281"
+  );
+});
+
 test("falls back to locally saved URL when module argument placeholder is not replaced", () => {
   const apiUrl = "https://justmysocks.example/members/getbwcounter.php?service=1397602&id=f488";
   const { requestedUrl, donePayload } = runPanel({

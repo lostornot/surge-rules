@@ -84,7 +84,17 @@ function extractApiUrlFromString(input) {
 
 function getApiUrlFromArgument() {
   if (typeof $argument === "undefined") return "";
-  return extractApiUrlFromString($argument);
+  const url = extractApiUrlFromString($argument);
+  if (url) return url;
+
+  const parsed = parseQueryLikeArgument(String($argument || ""));
+  const service = parsed.JMS_SERVICE || parsed.jms_service || parsed.service || "";
+  const id = parsed.JMS_ID || parsed.jms_id || parsed.id || "";
+  if (service && id) {
+    return `https://justmysocks6.net/members/getbwcounter.php?service=${encodeURIComponent(service)}&id=${encodeURIComponent(id)}`;
+  }
+
+  return "";
 }
 
 function getApiUrlFromStore() {
