@@ -1,10 +1,10 @@
 #!name=JMS 流量面板
-#!desc=在 Surge 信息面板中显示 Just My Socks 当前周期流量、剩余流量、使用率和重置日。不发通知；API URL 存在本地 persistentStore，不写入 GitHub。
+#!desc=在 Surge 信息面板中显示 Just My Socks 当前周期流量、剩余流量、使用率和重置日。不发通知；通过模块参数 JMS_API_URL 配置。
 #!system=ios
+#!arguments=JMS_API_URL=
 
 [Panel]
-JMS流量 = title="JMS 流量",content="先打开本地设置链接保存 JMS API URL",style=info,script-name=jms-traffic-panel,update-interval=3600
+JMS流量 = title="JMS 流量",content="请在模块参数 JMS_API_URL 中填写 Bandwidth Counter API",style=info,script-name=jms-traffic-panel,update-interval=3600
 
 [Script]
-jms-traffic-panel = type=generic,timeout=20,script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/jms-traffic-panel.js
-jms-traffic-panel-setup = type=http-request,pattern=^http:\/\/jms-panel\.local\/(set\?|show|clear),requires-body=false,max-size=0,timeout=20,script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/jms-traffic-panel.js
+jms-traffic-panel = type=generic,timeout=20,argument="JMS_API_URL=%JMS_API_URL%",script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/jms-traffic-panel.js
