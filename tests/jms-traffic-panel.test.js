@@ -49,6 +49,33 @@ function runPanel({
   return { donePayload, requestedUrl };
 }
 
+function runSetup({ requestUrl, storedUrl = "" }) {
+  let donePayload;
+  let written;
+
+  const sandbox = {
+    console,
+    $request: { url: requestUrl },
+    $persistentStore: {
+      read(key) {
+        assert.strictEqual(key, "jms_traffic_panel_api_url");
+        return storedUrl;
+      },
+      write(value, key) {
+        assert.strictEqual(key, "jms_traffic_panel_api_url");
+        written = value;
+        return true;
+      }
+    },
+    $done(payload) {
+      donePayload = payload;
+    }
+  };
+
+  vm.runInNewContext(source, sandbox, { filename: scriptPath });
+  return { donePayload, written };
+}
+
 test("uses JMS_API_URL module argument to fetch and render traffic", () => {
   const apiUrl = "https://justmysocks.example/members/getbwcounter.php?service=1&id=abc";
   const { donePayload, requestedUrl } = runPanel({
@@ -79,6 +106,28 @@ test("keeps unencoded ampersands inside module API URL", () => {
   });
 
   assert.strictEqual(requestedUrl, apiUrl);
+});
+
+test("falls back to locally saved URL when module argument placeholder is not replaced", () => {
+  const apiUrl = "https://justmysocks.example/members/getbwcounter.php?service=1397602&id=f488";
+  const { requestedUrl, donePayload } = runPanel({
+    argument: "JMS_API_URL=%JMS_API_URL%",
+    storedUrl: apiUrl
+  });
+
+  assert.strictEqual(requestedUrl, apiUrl);
+  assert.match(donePayload.title, /JMS 流量/);
+});
+
+test("setup request saves API URL to persistent store", () => {
+  const apiUrl = "https://justmysocks.example/members/getbwcounter.php?service=1397602&id=f488";
+  const { donePayload, written } = runSetup({
+    requestUrl: `http://jms-panel.local/set?url=${apiUrl}`
+  });
+
+  assert.strictEqual(written, apiUrl);
+  assert.strictEqual(donePayload.response.status, 200);
+  assert.match(donePayload.response.body, /保存成功/);
 });
 
 test("returns clear panel error when API URL is missing", () => {
@@ -112,11 +161,11 @@ test("returns clear panel error when traffic fields are missing", () => {
   assert.strictEqual(donePayload.style, "error");
 });
 
-test("module declares JMS_API_URL argument and does not expose setup endpoint", () => {
+test("module declares JMS_API_URL argument and exposes setup fallback endpoint", () => {
   const moduleSource = fs.readFileSync(modulePath, "utf8");
 
   assert.match(moduleSource, /^#!arguments=JMS_API_URL=/m);
   assert.match(moduleSource, /argument="JMS_API_URL=%JMS_API_URL%"/);
-  assert.doesNotMatch(moduleSource, /jms-panel\.local/);
-  assert.doesNotMatch(moduleSource, /type=http-request/);
+  assert.match(moduleSource, /jms-panel\\\.local/);
+  assert.match(moduleSource, /type=http-request/);
 });
