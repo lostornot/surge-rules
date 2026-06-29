@@ -19,9 +19,9 @@ Surge 中添加模块 URL：
 https://raw.githubusercontent.com/lostornot/surge-rules/main/modules/jms-traffic-panel.sgmodule
 ```
 
-启用模块时，在参数 `JMS_API_URL` 中填写 Just My Socks 后台的 **Bandwidth Counter API** 链接。
+启用模块时，在模块参数 `JMS_API_URL` 中填写 Just My Socks 后台的 **Bandwidth Counter API** 链接。
 
-> 注意：JMS API URL 相当于只读密钥，不要提交到 GitHub，不要分享给别人。
+> 注意：JMS API URL 相当于只读密钥，不要把真实链接提交到 GitHub，不要分享给别人。
 
 ### 显示内容
 

@@ -1,6 +1,6 @@
 // JMS Traffic Panel for Surge
 // Reads the Just My Socks bandwidth counter API and renders it as a Surge Information Panel.
-// The API URL is stored locally in Surge $persistentStore. Do NOT hard-code your real API URL in a public repository.
+// Configure it with the module argument JMS_API_URL. Do NOT hard-code your real API URL in a public repository.
 
 const STORE_KEY = "jms_traffic_panel_api_url";
 
@@ -15,7 +15,6 @@ function decimalGB(bytes) {
 
 function formatGB(value) {
   if (!Number.isFinite(value)) return "未知";
-  if (value >= 100) return `${value.toFixed(1)} GB`;
   return `${value.toFixed(2)} GB`;
 }
 
@@ -89,26 +88,11 @@ function getApiUrlFromArgument() {
 
 function getApiUrlFromStore() {
   try {
+    if (typeof $persistentStore === "undefined") return "";
     const value = $persistentStore.read(STORE_KEY);
     return extractApiUrlFromString(value);
   } catch (_) {
     return "";
-  }
-}
-
-function saveApiUrl(url) {
-  try {
-    return $persistentStore.write(url, STORE_KEY);
-  } catch (_) {
-    return false;
-  }
-}
-
-function clearApiUrl() {
-  try {
-    return $persistentStore.write("", STORE_KEY);
-  } catch (_) {
-    return false;
   }
 }
 
@@ -120,12 +104,15 @@ function maskUrl(url) {
 }
 
 function shortArgForDebug() {
-  const storeUrl = getApiUrlFromStore();
-  if (storeUrl) return `已从本地存储读取：${maskUrl(storeUrl)}`;
-
   const arg = typeof $argument === "undefined" ? "" : String($argument || "").trim();
   if (!arg) return "空";
-  if (arg.indexOf("%JMS_API_URL%") !== -1 || arg.indexOf("%jms_api_url%") !== -1) return "模块参数占位符未被替换";
+  if (
+    arg.indexOf("%JMS_API_URL%") !== -1 ||
+    arg.indexOf("%jms_api_url%") !== -1 ||
+    arg.indexOf("{{{JMS_API_URL}}}") !== -1
+  ) {
+    return "模块参数占位符未被替换";
+  }
   if (arg.length <= 80) return arg;
   return `${arg.slice(0, 32)}...${arg.slice(-16)}，长度 ${arg.length}`;
 }
@@ -137,59 +124,17 @@ function donePanel(title, content, style, icon) {
   $done(payload);
 }
 
-function response(status, body) {
-  $done({
-    response: {
-      status: status,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-      body: body
-    }
-  });
-}
-
-function html(title, body) {
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:24px;line-height:1.55}code{word-break:break-all;background:#f3f3f3;padding:2px 4px;border-radius:4px}.ok{color:#16833a}.bad{color:#b00020}</style></head><body>${body}</body></html>`;
-}
-
-function handleSetupRequest() {
-  const url = String($request.url || "");
-
-  if (/^http:\/\/jms-panel\.local\/clear/i.test(url)) {
-    const ok = clearApiUrl();
-    response(200, html("JMS 流量面板", `<h2 class="${ok ? "ok" : "bad"}">${ok ? "已清除" : "清除失败"}</h2><p>现在可以重新打开设置链接保存 API URL。</p>`));
-    return;
-  }
-
-  if (/^http:\/\/jms-panel\.local\/show/i.test(url)) {
-    const saved = getApiUrlFromStore();
-    response(200, html("JMS 流量面板", `<h2>当前状态</h2><p>${saved ? "已保存 API URL" : "未保存 API URL"}</p><p><code>${maskUrl(saved)}</code></p>`));
-    return;
-  }
-
-  const marker = "/set?";
-  const idx = url.indexOf(marker);
-  const raw = idx >= 0 ? url.slice(idx + marker.length) : "";
-  const apiUrl = extractApiUrlFromString(raw);
-
-  if (!apiUrl) {
-    response(400, html("JMS 流量面板", `<h2 class="bad">没有识别到 API URL</h2><p>请使用：</p><p><code>http://jms-panel.local/set?你的JMS API链接</code></p>`));
-    return;
-  }
-
-  const ok = saveApiUrl(apiUrl);
-  response(200, html("JMS 流量面板", `<h2 class="${ok ? "ok" : "bad"}">${ok ? "保存成功" : "保存失败"}</h2><p>JMS API URL 已保存到 Surge 本地存储。</p><p><code>${maskUrl(apiUrl)}</code></p><p>回到 Surge 的策略选择页面，刷新「JMS流量」面板即可。</p>`));
-}
-
 function renderPanel() {
-  const API_URL = getApiUrlFromStore() || getApiUrlFromArgument();
+  const argumentUrl = getApiUrlFromArgument();
+  const storeUrl = getApiUrlFromStore();
+  const API_URL = argumentUrl || storeUrl;
 
   if (!API_URL) {
     donePanel(
-      "JMS 流量",
+      "JMS 流量配置缺失",
       [
         "未读取到 JMS API URL。",
-        "请先在 Safari 打开设置链接：",
-        "http://jms-panel.local/set?你的JMS API链接",
+        "请在模块参数 JMS_API_URL 中填写 Just My Socks Bandwidth Counter API 链接。",
         `当前参数：${shortArgForDebug()}`,
         `更新：${nowText()}`
       ].join("\n"),
@@ -286,7 +231,7 @@ function renderPanel() {
 }
 
 if (typeof $request !== "undefined") {
-  handleSetupRequest();
+  donePanel("JMS 流量", "此脚本仅用于 Surge 信息面板。", "info", "gauge.with.dots.needle.33percent");
 } else {
   renderPanel();
 }
