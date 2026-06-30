@@ -1,0 +1,9 @@
+#!name=搬瓦工流量面板 Example
+#!desc=BandwagonHost / KiwiVM API 私有流量面板示例。复制到 private/bwg-traffic-panel.sgmodule 后填写真实 VEID/API_KEY，不要提交真实密钥。
+#!system=ios
+
+[Panel]
+搬瓦工流量 = title="搬瓦工流量",content="刷新后显示 KiwiVM 账期流量",style=info,script-name=bwg-traffic-panel,update-interval=3600
+
+[Script]
+bwg-traffic-panel = type=generic,timeout=30,argument="BWG1_NAME=DC6;BWG1_FLAG=🇺🇸;BWG1_VEID=123456;BWG1_API_KEY=CHANGE_ME",script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/bwg-traffic-panel.js
