@@ -154,6 +154,7 @@ test("returns configuration error when no VPS argument is present", () => {
 
   assert.strictEqual(donePayload.title, "VPS 流量配置缺失");
   assert.match(donePayload.content, /US-1446,100\.79\.53\.68/);
+  assert.match(donePayload.content, /当前参数：空/);
   assert.strictEqual(donePayload.style, "error");
 });
 
@@ -182,6 +183,50 @@ test("renders VPS rows from one simple VPS argument", () => {
 test("renders VPS rows when Surge passes the raw single argument value", () => {
   const { donePayload, requestedUrls } = runPanelWithArgument({
     argument: "US-1446,100.79.53.68",
+    responses: {
+      "http://100.79.53.68:8787/traffic": {
+        body: JSON.stringify({
+          country: "US",
+          rx_bytes: 40000000000,
+          tx_bytes: 48300000000,
+          limit_gb: 500,
+          reset: { type: "monthly", day: 6 }
+        })
+      }
+    }
+  });
+
+  assert.deepStrictEqual(requestedUrls, [
+    "http://100.79.53.68:8787/traffic"
+  ]);
+  assert.match(donePayload.content, /🇺🇸 US-1446 剩余411\.70G/);
+});
+
+test("renders VPS rows when raw argument is URL encoded", () => {
+  const { donePayload, requestedUrls } = runPanelWithArgument({
+    argument: "US-1446%2C100.79.53.68",
+    responses: {
+      "http://100.79.53.68:8787/traffic": {
+        body: JSON.stringify({
+          country: "US",
+          rx_bytes: 40000000000,
+          tx_bytes: 48300000000,
+          limit_gb: 500,
+          reset: { type: "monthly", day: 6 }
+        })
+      }
+    }
+  });
+
+  assert.deepStrictEqual(requestedUrls, [
+    "http://100.79.53.68:8787/traffic"
+  ]);
+  assert.match(donePayload.content, /🇺🇸 US-1446 剩余411\.70G/);
+});
+
+test("renders VPS rows with Chinese comma separator", () => {
+  const { donePayload, requestedUrls } = runPanelWithArgument({
+    argument: "US-1446，100.79.53.68",
     responses: {
       "http://100.79.53.68:8787/traffic": {
         body: JSON.stringify({

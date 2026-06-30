@@ -117,12 +117,12 @@ function loadConfig() {
 }
 
 function parseSimpleVpsList(value) {
-  return String(value || "")
+  return decodeMaybe(String(value || ""))
     .split("|")
     .map(entry => entry.trim())
     .filter(Boolean)
     .map(entry => {
-      const parts = entry.split(",").map(part => part.trim());
+      const parts = entry.split(/[,，]/).map(part => part.trim());
       const name = parts[0] || "";
       const host = parts[1] || "";
       if (!name || !host) return null;
@@ -138,6 +138,13 @@ function parseSimpleVpsList(value) {
       return { name, url: `${scheme}://${host}${portText}/traffic` };
     })
     .filter(Boolean);
+}
+
+function debugArgumentText() {
+  const raw = typeof $argument === "undefined" ? "" : String($argument || "");
+  if (!raw) return "当前参数：空";
+  if (raw.indexOf("%VPS%") !== -1) return "当前参数：模块参数占位符未被替换";
+  return `当前参数：${raw.slice(0, 160)}`;
 }
 
 function buildUrlFromParts(args, prefix) {
@@ -284,7 +291,7 @@ function renderPanel() {
   if (!servers.length) {
     donePanel(
       "VPS 流量配置缺失",
-      "请填写 VPS 参数，例如：US-1446,100.79.53.68。多台用 | 分隔。",
+      `请填写 VPS 参数，例如：US-1446,100.79.53.68。多台用 | 分隔。\n${debugArgumentText()}`,
       "error",
       "exclamationmark.triangle.fill"
     );
