@@ -81,6 +81,9 @@ function loadConfig() {
   const encoded = args.VPS_CONFIG_B64 || args.vps_config_b64 || "";
   if (encoded) return JSON.parse(base64UrlToUtf8(encoded));
 
+  const simple = parseSimpleVpsList(args.VPS || args.vps || "");
+  if (simple.length) return { vps: simple };
+
   const vps = [];
   for (let i = 1; i <= 20; i++) {
     const prefix = `VPS${i}_`;
@@ -110,6 +113,30 @@ function loadConfig() {
   }
 
   return vps.length ? { vps } : null;
+}
+
+function parseSimpleVpsList(value) {
+  return String(value || "")
+    .split("|")
+    .map(entry => entry.trim())
+    .filter(Boolean)
+    .map(entry => {
+      const parts = entry.split(",").map(part => part.trim());
+      const name = parts[0] || "";
+      const host = parts[1] || "";
+      if (!name || !host) return null;
+
+      if (/^https?:\/\//i.test(host)) {
+        return { name, url: host };
+      }
+
+      const port = parts[2] || "8787";
+      const https = /^(1|true|yes|https)$/i.test(parts[3] || "");
+      const scheme = https ? "https" : "http";
+      const portText = port ? `:${port}` : "";
+      return { name, url: `${scheme}://${host}${portText}/traffic` };
+    })
+    .filter(Boolean);
 }
 
 function buildUrlFromParts(args, prefix) {
@@ -256,7 +283,7 @@ function renderPanel() {
   if (!servers.length) {
     donePanel(
       "VPS 流量配置缺失",
-      "请至少填写 VPS1_NAME 和 VPS1_HOST；额度和重置周期在 VPS 安装脚本里配置。",
+      "请填写 VPS 参数，例如：US-1446,100.79.53.68。多台用 | 分隔。",
       "error",
       "exclamationmark.triangle.fill"
     );

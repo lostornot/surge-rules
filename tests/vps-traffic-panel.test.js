@@ -139,7 +139,7 @@ test("renders multiple VPS traffic rows with reset countdown and dot progress", 
   assert.strictEqual(donePayload.style, "alert");
 });
 
-test("returns configuration error when no VPS host arguments are present", () => {
+test("returns configuration error when no VPS argument is present", () => {
   const source = fs.readFileSync(scriptPath, "utf8");
   let donePayload;
 
@@ -152,8 +152,51 @@ test("returns configuration error when no VPS host arguments are present", () =>
   }, { filename: scriptPath });
 
   assert.strictEqual(donePayload.title, "VPS 流量配置缺失");
-  assert.match(donePayload.content, /VPS1_NAME/);
+  assert.match(donePayload.content, /US-1446,100\.79\.53\.68/);
   assert.strictEqual(donePayload.style, "error");
+});
+
+test("renders VPS rows from one simple VPS argument", () => {
+  const { donePayload, requestedUrls } = runPanelWithArgument({
+    argument: "VPS=US-1446,100.79.53.68",
+    responses: {
+      "http://100.79.53.68:8787/traffic": {
+        body: JSON.stringify({
+          country: "US",
+          rx_bytes: 40000000000,
+          tx_bytes: 48300000000,
+          limit_gb: 500,
+          reset: { type: "monthly", day: 6 }
+        })
+      }
+    }
+  });
+
+  assert.deepStrictEqual(requestedUrls, [
+    "http://100.79.53.68:8787/traffic"
+  ]);
+  assert.match(donePayload.content, /🇺🇸 US-1446 剩余411\.70G 6天后重置/);
+});
+
+test("renders multiple VPS rows from pipe-separated simple VPS argument", () => {
+  const { donePayload, requestedUrls } = runPanelWithArgument({
+    argument: "VPS=US-1446,100.79.53.68|BWG DC6,bwg-dc6.tailnet.ts.net",
+    responses: {
+      "http://100.79.53.68:8787/traffic": {
+        body: JSON.stringify({ country: "US", rx_bytes: 1, tx_bytes: 2, limit_gb: 500, reset: { type: "monthly", day: 1 } })
+      },
+      "http://bwg-dc6.tailnet.ts.net:8787/traffic": {
+        body: JSON.stringify({ country: "US", rx_bytes: 3, tx_bytes: 4, limit_gb: 1000, reset: { type: "monthly", day: 1 } })
+      }
+    }
+  });
+
+  assert.deepStrictEqual(requestedUrls, [
+    "http://100.79.53.68:8787/traffic",
+    "http://bwg-dc6.tailnet.ts.net:8787/traffic"
+  ]);
+  assert.match(donePayload.content, /US-1446/);
+  assert.match(donePayload.content, /BWG DC6/);
 });
 
 test("renders simple server-side configured VPS rows without token", () => {
@@ -266,7 +309,7 @@ test("simple host arguments omit default port for https", () => {
 test("module declares simple VPS host arguments", () => {
   const moduleSource = fs.readFileSync(modulePath, "utf8");
 
-  assert.match(moduleSource, /^#!arguments=VPS1_NAME=;VPS1_HOST=;VPS1_PORT=8787/m);
+  assert.match(moduleSource, /^#!arguments=VPS=$/m);
   assert.match(moduleSource, /script-name=vps-traffic-panel/);
-  assert.match(moduleSource, /VPS1_HOST=%VPS1_HOST%/);
+  assert.match(moduleSource, /argument="VPS=%VPS%"/);
 });

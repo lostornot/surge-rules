@@ -42,7 +42,19 @@ After install, test:
 curl 'http://127.0.0.1:8787/traffic'
 ```
 
-Use the printed `VPS1_HOST` and `VPS1_PORT` values in the Surge module. When using Tailscale, set `VPS1_HOST` to the Tailscale IP or MagicDNS name.
+In the Surge module, fill the single `VPS` field:
+
+```text
+US-1446,100.79.53.68
+```
+
+For multiple VPS:
+
+```text
+US-1446,100.79.53.68|BWG DC6,bwg-dc6.tailnet.ts.net
+```
+
+The format is `name,host` or `name,host,port`. The default port is `8787`. When using Tailscale, set `host` to the Tailscale IP or MagicDNS name.
 
 ## Manual Install
 
