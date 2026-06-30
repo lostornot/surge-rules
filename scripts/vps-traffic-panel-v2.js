@@ -77,11 +77,12 @@ function base64UrlToUtf8(input) {
 }
 
 function loadConfig() {
-  const args = parseArgument(typeof $argument === "undefined" ? "" : $argument);
+  const rawArgument = typeof $argument === "undefined" ? "" : String($argument || "");
+  const args = parseArgument(rawArgument);
   const encoded = args.VPS_CONFIG_B64 || args.vps_config_b64 || "";
   if (encoded) return JSON.parse(base64UrlToUtf8(encoded));
 
-  const simple = parseSimpleVpsList(args.VPS || args.vps || "");
+  const simple = parseSimpleVpsList(args.VPS || args.vps || rawArgument);
   if (simple.length) return { vps: simple };
 
   const vps = [];
