@@ -71,12 +71,12 @@ function decimalGB(bytes) {
 
 function formatGB(value) {
   if (!Number.isFinite(value)) return "未知";
-  return `${value.toFixed(2)}G`;
+  return `${value.toFixed(2)} GB`;
 }
 
 function progressBar(percent, width) {
   const filled = Math.max(0, Math.min(width, Math.round(percent / 100 * width)));
-  return "●".repeat(filled) + "○".repeat(width - filled);
+  return "■".repeat(filled) + "□".repeat(width - filled);
 }
 
 function resetDaysText(resetSeconds, now) {
@@ -138,7 +138,7 @@ function renderRows(items, now) {
   const rows = items.map(item => {
     if (item.error) {
       maxPercent = Math.max(maxPercent, 100);
-      return `${item.flag || "⚠️"} ${item.name} 查询失败\n${item.error}\n剩余流量 ${nowText(now)}`;
+      return `${item.name} 查询失败\n${item.error}\n更新：${nowText(now)}`;
     }
 
     const usedGB = decimalGB(item.usedBytes);
@@ -147,11 +147,11 @@ function renderRows(items, now) {
     const percent = quotaGB > 0 ? usedGB / quotaGB * 100 : 0;
     maxPercent = Math.max(maxPercent, percent);
 
-    const flag = item.flag || "🌐";
     return [
-      `${flag} ${item.name}  ${formatGB(usedGB)}/${formatGB(quotaGB)} ${percent.toFixed(1)}%`,
-      `${formatGB(remainingGB)}  ${progressBar(percent, 10)}`,
-      `剩余流量  ${resetDaysText(item.resetAt, now)}  更新${nowText(now)}`
+      `已用 ${usedGB.toFixed(2)} / ${formatGB(quotaGB)}（${percent.toFixed(1)}%）`,
+      `${progressBar(percent, 10)} ${percent.toFixed(1)}%`,
+      `重置：${resetDaysText(item.resetAt, now)}`,
+      `更新：${nowText(now)}`
     ].join("\n");
   });
 
@@ -161,6 +161,16 @@ function renderRows(items, now) {
   else if (maxPercent >= 50) style = "info";
 
   return { content: rows.join("\n\n"), style };
+}
+
+function panelTitle(items) {
+  const firstOk = items.find(item => !item.error);
+  if (!firstOk) return "搬瓦工流量查询失败";
+
+  const usedGB = decimalGB(firstOk.usedBytes);
+  const quotaGB = decimalGB(firstOk.quotaBytes);
+  const remainingGB = Math.max(quotaGB - usedGB, 0);
+  return `${firstOk.name}｜剩余流量 ${formatGB(remainingGB)}`;
 }
 
 function renderPanel() {
@@ -189,7 +199,7 @@ function renderPanel() {
     if (pending > 0) return;
 
     const rendered = renderRows(results, now);
-    donePanel(`搬瓦工流量｜更新 ${nowText(now)}`, rendered.content, rendered.style, "server.rack");
+    donePanel(panelTitle(results), rendered.content, rendered.style, "server.rack");
   }
 
   services.forEach((service, index) => {

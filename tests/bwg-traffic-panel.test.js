@@ -43,11 +43,10 @@ function runPanel({ argument, responses, now = "2026-06-30T11:11:00+08:00" }) {
   return { donePayload, requests };
 }
 
-test("renders one KiwiVM service in the private three-line panel layout", () => {
+test("renders one KiwiVM service with remaining traffic in the title", () => {
   const { donePayload, requests } = runPanel({
     argument: [
-      "BWG1_NAME=DC6",
-      "BWG1_FLAG=🇺🇸",
+      "BWG1_NAME=🇺🇸BWG-US-DC6",
       "BWG1_VEID=123456",
       "BWG1_API_KEY=secret"
     ].join(";"),
@@ -67,10 +66,11 @@ test("renders one KiwiVM service in the private three-line panel layout", () => 
   assert.strictEqual(requests.length, 1);
   assert.strictEqual(requests[0].url, "https://api.64clouds.com/v1/getServiceInfo");
   assert.strictEqual(requests[0].body, "veid=123456&api_key=secret");
-  assert.strictEqual(donePayload.title, "搬瓦工流量｜更新 11:11");
-  assert.match(donePayload.content, /🇺🇸 DC6\s+0\.57G\/322\.12G 0\.2%/);
-  assert.match(donePayload.content, /321\.55G\s+○○○○○○○○○○/);
-  assert.match(donePayload.content, /剩余流量\s+还剩10天\s+更新11:11/);
+  assert.strictEqual(donePayload.title, "🇺🇸BWG-US-DC6｜剩余流量 321.55 GB");
+  assert.match(donePayload.content, /^已用 0\.57 \/ 322\.12 GB（0\.2%）$/m);
+  assert.match(donePayload.content, /^□□□□□□□□□□ 0\.2%$/m);
+  assert.match(donePayload.content, /^重置：还剩10天$/m);
+  assert.match(donePayload.content, /^更新：11:11$/m);
   assert.strictEqual(donePayload.style, "good");
 });
 
@@ -90,8 +90,9 @@ test("applies monthly_data_multiplier to used traffic and quota", () => {
     }
   });
 
-  assert.match(donePayload.content, /倍率机\s+80\.00G\/200\.00G 40\.0%/);
-  assert.match(donePayload.content, /120\.00G\s+●●●●○○○○○○/);
+  assert.match(donePayload.title, /剩余流量 120\.00 GB/);
+  assert.match(donePayload.content, /已用 80\.00 \/ 200\.00 GB（40\.0%）/);
+  assert.match(donePayload.content, /■■■■□□□□□□ 40\.0%/);
 });
 
 test("renders multiple services and escalates style by highest usage", () => {
@@ -122,8 +123,8 @@ test("renders multiple services and escalates style by highest usage", () => {
     }
   });
 
-  assert.match(donePayload.content, /🌐 DC6\s+25\.00G\/100\.00G 25\.0%/);
-  assert.match(donePayload.content, /🇭🇰 HK\s+91\.00G\/100\.00G 91\.0%/);
+  assert.match(donePayload.content, /已用 25\.00 \/ 100\.00 GB（25\.0%）/);
+  assert.match(donePayload.content, /已用 91\.00 \/ 100\.00 GB（91\.0%）/);
   assert.strictEqual(donePayload.style, "error");
 });
 
