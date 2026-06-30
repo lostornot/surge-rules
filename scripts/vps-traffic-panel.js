@@ -28,9 +28,23 @@ function parseArgument(arg) {
   String(arg || "").split(/[&;\n]/).forEach(pair => {
     const idx = pair.indexOf("=");
     if (idx === -1) return;
-    result[pair.slice(0, idx).trim()] = pair.slice(idx + 1).trim();
+    result[pair.slice(0, idx).trim()] = decodeMaybe(pair.slice(idx + 1).trim());
   });
   return result;
+}
+
+function decodeMaybe(value) {
+  let current = String(value || "").trim();
+  for (let i = 0; i < 2; i++) {
+    try {
+      const decoded = decodeURIComponent(current);
+      if (decoded === current) break;
+      current = decoded;
+    } catch (_) {
+      break;
+    }
+  }
+  return current.trim();
 }
 
 function base64UrlToUtf8(input) {
@@ -65,8 +79,35 @@ function base64UrlToUtf8(input) {
 function loadConfig() {
   const args = parseArgument(typeof $argument === "undefined" ? "" : $argument);
   const encoded = args.VPS_CONFIG_B64 || args.vps_config_b64 || "";
-  if (!encoded) return null;
-  return JSON.parse(base64UrlToUtf8(encoded));
+  if (encoded) return JSON.parse(base64UrlToUtf8(encoded));
+
+  const vps = [];
+  for (let i = 1; i <= 20; i++) {
+    const prefix = `VPS${i}_`;
+    const name = args[`${prefix}NAME`];
+    const url = args[`${prefix}URL`];
+    if (!name && !url) continue;
+    if (!name || !url) continue;
+
+    const resetType = args[`${prefix}RESET_TYPE`] || "monthly";
+    const item = {
+      name,
+      url,
+      limit_gb: toNumber(args[`${prefix}LIMIT_GB`]),
+      reset: { type: resetType }
+    };
+
+    if (resetType === "rolling") {
+      item.reset.start = args[`${prefix}RESET_START`];
+      item.reset.days = toNumber(args[`${prefix}RESET_DAYS`]) || 30;
+    } else {
+      item.reset.day = toNumber(args[`${prefix}RESET_DAY`]) || 1;
+    }
+
+    vps.push(item);
+  }
+
+  return vps.length ? { vps } : null;
 }
 
 function countryToFlag(country) {
