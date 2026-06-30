@@ -4,8 +4,8 @@ const path = require("path");
 const vm = require("vm");
 const test = require("node:test");
 
-const scriptPath = path.join(__dirname, "..", "scripts", "vps-traffic-panel.js");
-const scriptV2Path = path.join(__dirname, "..", "scripts", "vps-traffic-panel-v2.js");
+const legacyScriptPath = path.join(__dirname, "..", "scripts", "vps-traffic-panel.js");
+const scriptPath = path.join(__dirname, "..", "scripts", "vps-traffic-panel-v2.js");
 const modulePath = path.join(__dirname, "..", "modules", "vps-traffic-panel.sgmodule");
 
 function base64UrlJson(value) {
@@ -179,6 +179,28 @@ test("renders VPS rows from one simple VPS argument", () => {
   assert.match(donePayload.content, /🇺🇸 US-1446 剩余411\.70G 6天后重置/);
 });
 
+test("renders VPS rows when Surge passes the raw single argument value", () => {
+  const { donePayload, requestedUrls } = runPanelWithArgument({
+    argument: "US-1446,100.79.53.68",
+    responses: {
+      "http://100.79.53.68:8787/traffic": {
+        body: JSON.stringify({
+          country: "US",
+          rx_bytes: 40000000000,
+          tx_bytes: 48300000000,
+          limit_gb: 500,
+          reset: { type: "monthly", day: 6 }
+        })
+      }
+    }
+  });
+
+  assert.deepStrictEqual(requestedUrls, [
+    "http://100.79.53.68:8787/traffic"
+  ]);
+  assert.match(donePayload.content, /🇺🇸 US-1446 剩余411\.70G/);
+});
+
 test("renders multiple VPS rows from pipe-separated simple VPS argument", () => {
   const { donePayload, requestedUrls } = runPanelWithArgument({
     argument: "VPS=US-1446,100.79.53.68|BWG DC6,bwg-dc6.tailnet.ts.net",
@@ -314,5 +336,6 @@ test("module declares simple VPS host arguments", () => {
   assert.match(moduleSource, /script-name=vps-traffic-panel-v2/);
   assert.match(moduleSource, /argument="VPS=%VPS%"/);
   assert.match(moduleSource, /scripts\/vps-traffic-panel-v2\.js/);
-  assert.ok(fs.existsSync(scriptV2Path));
+  assert.ok(fs.existsSync(scriptPath));
+  assert.ok(fs.existsSync(legacyScriptPath));
 });
