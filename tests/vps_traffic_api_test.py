@@ -107,15 +107,18 @@ class VpsTrafficApiTest(unittest.TestCase):
         self.assertEqual(payload["tx_bytes"], 600)
         self.assertEqual(payload["source"], "vnstat-rolling")
 
-    def test_missing_current_month_raises_clear_error(self):
-        with self.assertRaisesRegex(ValueError, "No vnStat month entry"):
-            vps_traffic_api.build_payload(
-                self.sample_vnstat(),
-                interface_name="eth0",
-                country="US",
-                flag="",
-                now=datetime(2026, 7, 1, tzinfo=timezone.utc),
-            )
+    def test_missing_current_month_returns_zero_payload_for_new_vnstat_database(self):
+        payload = vps_traffic_api.build_payload(
+            self.sample_vnstat(),
+            interface_name="eth0",
+            country="US",
+            flag="",
+            now=datetime(2026, 7, 1, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(payload["rx_bytes"], 0)
+        self.assertEqual(payload["tx_bytes"], 0)
+        self.assertEqual(payload["source"], "vnstat-month-empty")
 
     def test_json_response_is_compact_utf8(self):
         body = vps_traffic_api.json_bytes({"flag": "🇺🇸", "rx_bytes": 1})
