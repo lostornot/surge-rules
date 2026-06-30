@@ -77,23 +77,29 @@ http://jms-panel.test/set?url=你的JMS API链接
 
 ### Surge 配置格式
 
-推荐在私有本地模块里直接使用可读参数：
+推荐在私有本地模块里直接使用简单参数：
 
 ```text
 VPS1_NAME=US-1446;
-VPS1_URL=https%3A%2F%2Fus-1446.example.com%2Ftraffic%3Ftoken%3DCHANGE_ME;
+VPS1_HOST=100.79.53.68;
+VPS1_PORT=8787;
+VPS1_TOKEN=CHANGE_ME;
 VPS1_LIMIT_GB=500;
 VPS1_RESET_TYPE=monthly;
 VPS1_RESET_DAY=1;
 VPS2_NAME=BWG DC6;
-VPS2_URL=https%3A%2F%2Fbwg-dc6.example.com%2Ftraffic%3Ftoken%3DCHANGE_ME;
+VPS2_HOST=bwg-dc6.example.com;
+VPS2_HTTPS=1;
+VPS2_TOKEN=CHANGE_ME;
 VPS2_LIMIT_GB=1000;
 VPS2_RESET_TYPE=rolling;
 VPS2_RESET_START=2026-06-11;
 VPS2_RESET_DAYS=30
 ```
 
-URL 建议做百分号编码，避免 `?` 和 `&` 被 Surge 参数解析误伤。脚本会自动解码。
+默认请求 `http://HOST:8787/traffic?token=TOKEN`。如果 `VPS*_HTTPS=1`，默认请求 `https://HOST/traffic?token=TOKEN`。需要自定义路径时可加 `VPS*_PATH=/traffic`。
+
+如果一定要直接填完整 URL，也支持 `VPS1_URL=`；完整 URL 建议做百分号编码，避免 `?` 和 `&` 被 Surge 参数解析误伤。脚本会自动解码。
 
 也兼容把配置 JSON 转成 base64url 后，填入 `VPS_CONFIG_B64`。配置示例：
 

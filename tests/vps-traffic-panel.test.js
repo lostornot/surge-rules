@@ -189,6 +189,53 @@ test("renders VPS rows from readable indexed arguments", () => {
   assert.match(donePayload.content, /⚠️ BWG DC6 剩余288\.40G/);
 });
 
+test("renders VPS rows from simple host arguments", () => {
+  const { donePayload, requestedUrls } = runPanelWithArgument({
+    argument: [
+      "VPS1_NAME=US-1446",
+      "VPS1_HOST=100.79.53.68",
+      "VPS1_PORT=8787",
+      "VPS1_TOKEN=abc",
+      "VPS1_LIMIT_GB=500",
+      "VPS1_RESET_TYPE=monthly",
+      "VPS1_RESET_DAY=1"
+    ].join(";"),
+    responses: {
+      "http://100.79.53.68:8787/traffic?token=abc": {
+        body: JSON.stringify({ country: "US", rx_bytes: 40000000000, tx_bytes: 48300000000 })
+      }
+    }
+  });
+
+  assert.deepStrictEqual(requestedUrls, [
+    "http://100.79.53.68:8787/traffic?token=abc"
+  ]);
+  assert.match(donePayload.content, /🇺🇸 US-1446 剩余411\.70G/);
+});
+
+test("simple host arguments omit default port for https", () => {
+  const { requestedUrls } = runPanelWithArgument({
+    argument: [
+      "VPS1_NAME=BWG DC6",
+      "VPS1_HOST=bwg-dc6.example.com",
+      "VPS1_HTTPS=1",
+      "VPS1_TOKEN=def",
+      "VPS1_LIMIT_GB=1000",
+      "VPS1_RESET_TYPE=monthly",
+      "VPS1_RESET_DAY=1"
+    ].join(";"),
+    responses: {
+      "https://bwg-dc6.example.com/traffic?token=def": {
+        body: JSON.stringify({ country: "US", rx_bytes: 1, tx_bytes: 2 })
+      }
+    }
+  });
+
+  assert.deepStrictEqual(requestedUrls, [
+    "https://bwg-dc6.example.com/traffic?token=def"
+  ]);
+});
+
 test("module declares VPS_CONFIG_B64 argument", () => {
   const moduleSource = fs.readFileSync(modulePath, "utf8");
 
