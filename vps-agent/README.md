@@ -2,7 +2,42 @@
 
 This tiny agent exposes current-month `vnStat` traffic as JSON for the Surge VPS traffic panel.
 
-## 1. Install vnStat
+## Quick Install
+
+On each VPS, run:
+
+```bash
+curl -fsSL -o /tmp/vps-traffic-install.sh https://raw.githubusercontent.com/lostornot/surge-rules/main/vps-agent/install.sh
+sudo bash /tmp/vps-traffic-install.sh
+```
+
+The installer will:
+
+- install `vnstat`, `python3`, and `curl`;
+- guess the default network interface;
+- try to detect the VPS country;
+- generate a token and print it at the end;
+- create and start the `vps-traffic-api` systemd service.
+
+Optional overrides:
+
+```bash
+sudo TOKEN=change-me COUNTRY=US INTERFACE=eth0 PORT=8787 bash /tmp/vps-traffic-install.sh
+```
+
+Most VPS only need the simple two-command install. Use the optional form only when the interface guess is wrong, or when you want a fixed token.
+
+After install, test:
+
+```bash
+curl 'http://127.0.0.1:8787/traffic?token=<printed-token>'
+```
+
+Use the printed `VPS1_HOST`, `VPS1_PORT`, and `VPS1_TOKEN` values in the Surge private module.
+
+## Manual Install
+
+### 1. Install vnStat
 
 Debian/Ubuntu:
 
