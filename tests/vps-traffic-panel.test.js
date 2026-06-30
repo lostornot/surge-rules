@@ -377,7 +377,7 @@ test("simple host arguments omit default port for https", () => {
 test("module declares simple VPS host arguments", () => {
   const moduleSource = fs.readFileSync(modulePath, "utf8");
 
-  assert.match(moduleSource, /^#!arguments=VPS=$/m);
+  assert.match(moduleSource, /^#!arguments=VPS=US-1446%2C100\.79\.53\.68$/m);
   assert.match(moduleSource, /script-name=vps-traffic-panel-v2/);
   assert.match(moduleSource, /argument="VPS=%VPS%"/);
   assert.match(moduleSource, /scripts\/vps-traffic-panel-v2\.js/);

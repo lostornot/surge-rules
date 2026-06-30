@@ -1,7 +1,7 @@
 #!name=VPS 流量面板
 #!desc=在 Surge 信息面板中显示多台 VPS 双向流量。填法：名字,地址；多台用 | 分隔。额度和重置周期在 VPS 端配置。
 #!system=ios
-#!arguments=VPS=
+#!arguments=VPS=US-1446%2C100.79.53.68
 
 [Panel]
 VPS流量 = title="VPS 流量总览",content="请填写 VPS，例如：US-1446,100.79.53.68",style=info,script-name=vps-traffic-panel-v2,update-interval=3600
