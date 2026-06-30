@@ -47,7 +47,7 @@ def current_month_entry(interface: dict[str, Any], now: datetime) -> dict[str, A
         if date.get("year") == now.year and date.get("month") == now.month:
             return item
 
-    raise ValueError(f"No vnStat month entry for {now.year}-{now.month:02d}")
+    return {"rx": 0, "tx": 0, "empty": True}
 
 
 def parse_ymd(value: str) -> datetime:
@@ -106,7 +106,7 @@ def build_payload(
         source = "vnstat-rolling"
     else:
         traffic = current_month_entry(interface, current_time)
-        source = "vnstat-month"
+        source = "vnstat-month-empty" if traffic.get("empty") else "vnstat-month"
 
     payload: dict[str, Any] = {
         "rx_bytes": int(traffic.get("rx", 0)),
