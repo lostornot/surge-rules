@@ -8,6 +8,8 @@ const legacyScriptPath = path.join(__dirname, "..", "scripts", "vps-traffic-pane
 const scriptPath = path.join(__dirname, "..", "scripts", "vps-traffic-panel-v2.js");
 const modulePath = path.join(__dirname, "..", "modules", "vps-traffic-panel.sgmodule");
 const moduleV3Path = path.join(__dirname, "..", "modules", "vps-traffic-panel-v3.sgmodule");
+const directModulePath = path.join(__dirname, "..", "modules", "vps-traffic-panel-direct.sgmodule");
+const directScriptPath = path.join(__dirname, "..", "scripts", "vps-traffic-panel-direct.js");
 
 function base64UrlJson(value) {
   return Buffer.from(JSON.stringify(value), "utf8")
@@ -394,4 +396,14 @@ test("v3 module uses raw VPS argument and a dedicated script", () => {
   assert.match(moduleSource, /script-name=vps-traffic-panel-v3/);
   assert.match(moduleSource, /argument="%VPS%"/);
   assert.match(moduleSource, /scripts\/vps-traffic-panel-v3\.js/);
+});
+
+test("direct module hardcodes VPS argument without placeholders", () => {
+  const moduleSource = fs.readFileSync(directModulePath, "utf8");
+
+  assert.doesNotMatch(moduleSource, /^#!arguments=/m);
+  assert.match(moduleSource, /script-name=vps-traffic-panel-direct/);
+  assert.match(moduleSource, /argument="US-1446,100\.79\.53\.68"/);
+  assert.match(moduleSource, /scripts\/vps-traffic-panel-direct\.js/);
+  assert.ok(fs.existsSync(directScriptPath));
 });

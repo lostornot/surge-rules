@@ -1,0 +1,9 @@
+#!name=VPS 流量面板 Direct
+#!desc=在 Surge 信息面板中显示 VPS 双向流量。此版本不使用模块参数，配置直接写在模块里。
+#!system=ios
+
+[Panel]
+VPS流量Direct = title="VPS 流量总览",content="刷新后显示 VPS 流量",style=info,script-name=vps-traffic-panel-direct,update-interval=3600
+
+[Script]
+vps-traffic-panel-direct = type=generic,timeout=30,argument="US-1446,100.79.53.68",script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/vps-traffic-panel-direct.js
