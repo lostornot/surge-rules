@@ -68,6 +68,13 @@ http://jms-panel.test/set?url=你的JMS API链接
 
 `country` 可选；如果返回 `flag`，面板会优先使用 `flag`。
 
+仓库提供了一个可选 VPS 端 agent：
+
+- `vps-agent/vps_traffic_api.py`
+- `vps-agent/README.md`
+
+它基于 `vnStat` 输出当前自然月上传/下载字节数。
+
 ### Surge 配置格式
 
 把配置 JSON 转成 base64url 后，填入 `VPS_CONFIG_B64`。配置示例：

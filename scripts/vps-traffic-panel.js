@@ -114,6 +114,27 @@ function resetText(item, now) {
   return `${daysBetween(now, next)}天后重置`;
 }
 
+function appendQuery(url, params) {
+  const pairs = [];
+  Object.keys(params).forEach(key => {
+    const value = params[key];
+    if (value === undefined || value === null || value === "") return;
+    pairs.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+  });
+  if (!pairs.length) return url;
+  return `${url}${url.indexOf("?") === -1 ? "?" : "&"}${pairs.join("&")}`;
+}
+
+function requestUrlForItem(item) {
+  if (item.reset && item.reset.type === "rolling") {
+    return appendQuery(item.url, {
+      period_start: item.reset.start,
+      period_days: item.reset.days || 30
+    });
+  }
+  return item.url;
+}
+
 function extractBytes(json, keys) {
   for (const key of keys) {
     const value = toNumber(json[key]);
@@ -192,7 +213,7 @@ function renderPanel() {
   }
 
   servers.forEach((item, index) => {
-    $httpClient.get({ url: item.url, timeout: item.timeout || 10, "auto-redirect": true }, (error, response, data) => {
+    $httpClient.get({ url: requestUrlForItem(item), timeout: item.timeout || 10, "auto-redirect": true }, (error, response, data) => {
       if (error) {
         finishOne(index, Object.assign({}, item, { error: `请求失败：${String(error)}` }));
         return;
