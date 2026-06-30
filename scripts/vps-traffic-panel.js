@@ -85,7 +85,7 @@ function loadConfig() {
   for (let i = 1; i <= 20; i++) {
     const prefix = `VPS${i}_`;
     const name = args[`${prefix}NAME`];
-    const url = args[`${prefix}URL`];
+    const url = args[`${prefix}URL`] || buildUrlFromParts(args, prefix);
     if (!name && !url) continue;
     if (!name || !url) continue;
 
@@ -108,6 +108,22 @@ function loadConfig() {
   }
 
   return vps.length ? { vps } : null;
+}
+
+function buildUrlFromParts(args, prefix) {
+  const host = args[`${prefix}HOST`];
+  if (!host) return "";
+
+  const https = /^(1|true|yes)$/i.test(args[`${prefix}HTTPS`] || "");
+  const scheme = https ? "https" : "http";
+  const portValue = args[`${prefix}PORT`];
+  const port = portValue !== undefined ? portValue : (https ? "" : "8787");
+  const rawPath = args[`${prefix}PATH`] || "/traffic";
+  const path = rawPath.charAt(0) === "/" ? rawPath : `/${rawPath}`;
+  const token = args[`${prefix}TOKEN`] || "";
+  const base = `${scheme}://${host}${port ? `:${port}` : ""}${path}`;
+  if (!token) return base;
+  return appendQuery(base, { token });
 }
 
 function countryToFlag(country) {
