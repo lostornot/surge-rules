@@ -48,6 +48,56 @@ http://jms-panel.test/set?url=你的JMS API链接
 
 用途：在 Surge 信息面板里显示多台 VPS 的双向流量总览。
 
+> 旧 VPS 面板基于每台 VPS 自行暴露的 `vnStat` 数据，只能统计安装 agent 之后的系统流量。搬瓦工 / BandwagonHost 建议使用下面的 KiwiVM API 私有面板，直接读取服务商账期流量。
+
+## 搬瓦工 KiwiVM 流量面板
+
+用途：通过 BandwagonHost / KiwiVM API 在 Surge 信息面板里显示真实账期流量。
+
+### 文件
+
+- `scripts/bwg-traffic-panel.js`
+- `modules/bwg-traffic-panel.example.sgmodule`
+- `private/bwg-traffic-panel.sgmodule`
+
+`private/` 已在 `.gitignore` 中，真实 `VEID` 和 `API_KEY` 只放这里，不提交公开仓库。
+
+### 安装
+
+复制示例模块到私有目录后填写真实参数：
+
+```text
+BWG1_NAME=DC6;
+BWG1_FLAG=🇺🇸;
+BWG1_VEID=你的VEID;
+BWG1_API_KEY=你的API_KEY
+```
+
+多台 VPS 继续追加 `BWG2_*`、`BWG3_*`：
+
+```text
+BWG1_NAME=DC6;BWG1_FLAG=🇺🇸;BWG1_VEID=123456;BWG1_API_KEY=xxx;
+BWG2_NAME=HK;BWG2_FLAG=🇭🇰;BWG2_VEID=234567;BWG2_API_KEY=yyy
+```
+
+面板脚本使用 `POST https://api.64clouds.com/v1/getServiceInfo`，读取 `plan_monthly_data`、`data_counter`、`monthly_data_multiplier` 和 `data_next_reset`。流量按：
+
+```text
+已用 = data_counter * monthly_data_multiplier
+总量 = plan_monthly_data * monthly_data_multiplier
+剩余 = 总量 - 已用
+```
+
+### 显示格式
+
+```text
+🇺🇸 DC6  0.57G/322.12G 0.2%
+321.55G  ○○○○○○○○○○
+剩余流量  还剩10天  更新11:11
+```
+
+> 注意：KiwiVM API key 权限较高，不要把真实 key 放到公开模块、截图、issue 或日志中。
+
 ### 文件
 
 - `modules/vps-traffic-panel.sgmodule`
