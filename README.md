@@ -77,7 +77,25 @@ http://jms-panel.test/set?url=你的JMS API链接
 
 ### Surge 配置格式
 
-把配置 JSON 转成 base64url 后，填入 `VPS_CONFIG_B64`。配置示例：
+推荐在私有本地模块里直接使用可读参数：
+
+```text
+VPS1_NAME=US-1446;
+VPS1_URL=https%3A%2F%2Fus-1446.example.com%2Ftraffic%3Ftoken%3DCHANGE_ME;
+VPS1_LIMIT_GB=500;
+VPS1_RESET_TYPE=monthly;
+VPS1_RESET_DAY=1;
+VPS2_NAME=BWG DC6;
+VPS2_URL=https%3A%2F%2Fbwg-dc6.example.com%2Ftraffic%3Ftoken%3DCHANGE_ME;
+VPS2_LIMIT_GB=1000;
+VPS2_RESET_TYPE=rolling;
+VPS2_RESET_START=2026-06-11;
+VPS2_RESET_DAYS=30
+```
+
+URL 建议做百分号编码，避免 `?` 和 `&` 被 Surge 参数解析误伤。脚本会自动解码。
+
+也兼容把配置 JSON 转成 base64url 后，填入 `VPS_CONFIG_B64`。配置示例：
 
 ```json
 {

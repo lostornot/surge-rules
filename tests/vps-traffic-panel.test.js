@@ -52,6 +52,43 @@ function runPanel({ config, responses, now = "2026-06-30T11:11:00+08:00" }) {
   return { donePayload, requestedUrls };
 }
 
+function runPanelWithArgument({ argument, responses, now = "2026-06-30T11:11:00+08:00" }) {
+  const source = fs.readFileSync(scriptPath, "utf8");
+  const requestedUrls = [];
+  let donePayload;
+
+  const sandbox = {
+    console,
+    Date: class extends Date {
+      constructor(...args) {
+        super(...(args.length ? args : [now]));
+      }
+      static now() {
+        return new Date(now).getTime();
+      }
+    },
+    $argument: argument,
+    $httpClient: {
+      get(options, callback) {
+        const url = typeof options === "string" ? options : options.url;
+        requestedUrls.push(url);
+        const item = responses[url];
+        if (!item) {
+          callback("not found", { status: 404 }, "");
+          return;
+        }
+        callback(item.error || null, { status: item.status || 200 }, item.body);
+      }
+    },
+    $done(payload) {
+      donePayload = payload;
+    }
+  };
+
+  vm.runInNewContext(source, sandbox, { filename: scriptPath });
+  return { donePayload, requestedUrls };
+}
+
 test("renders multiple VPS traffic rows with reset countdown and dot progress", () => {
   const config = {
     vps: [
@@ -117,6 +154,39 @@ test("returns configuration error when VPS_CONFIG_B64 is missing", () => {
   assert.strictEqual(donePayload.title, "VPS 流量配置缺失");
   assert.match(donePayload.content, /VPS_CONFIG_B64/);
   assert.strictEqual(donePayload.style, "error");
+});
+
+test("renders VPS rows from readable indexed arguments", () => {
+  const { donePayload, requestedUrls } = runPanelWithArgument({
+    argument: [
+      "VPS1_NAME=US-1446",
+      "VPS1_URL=https%3A%2F%2Fvps1.example%2Ftraffic%3Ftoken%3Dabc",
+      "VPS1_LIMIT_GB=500",
+      "VPS1_RESET_TYPE=monthly",
+      "VPS1_RESET_DAY=1",
+      "VPS2_NAME=BWG DC6",
+      "VPS2_URL=https%3A%2F%2Fvps2.example%2Ftraffic%3Ftoken%3Ddef",
+      "VPS2_LIMIT_GB=1000",
+      "VPS2_RESET_TYPE=rolling",
+      "VPS2_RESET_START=2026-06-11",
+      "VPS2_RESET_DAYS=30"
+    ].join(";"),
+    responses: {
+      "https://vps1.example/traffic?token=abc": {
+        body: JSON.stringify({ country: "US", rx_bytes: 40000000000, tx_bytes: 48300000000 })
+      },
+      "https://vps2.example/traffic?token=def&period_start=2026-06-11&period_days=30": {
+        body: JSON.stringify({ flag: "⚠️", rx_bytes: 500000000000, tx_bytes: 211600000000 })
+      }
+    }
+  });
+
+  assert.deepStrictEqual(requestedUrls, [
+    "https://vps1.example/traffic?token=abc",
+    "https://vps2.example/traffic?token=def&period_start=2026-06-11&period_days=30"
+  ]);
+  assert.match(donePayload.content, /🇺🇸 US-1446 剩余411\.70G/);
+  assert.match(donePayload.content, /⚠️ BWG DC6 剩余288\.40G/);
 });
 
 test("module declares VPS_CONFIG_B64 argument", () => {
