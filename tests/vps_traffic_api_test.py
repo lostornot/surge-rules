@@ -70,6 +70,9 @@ class VpsTrafficApiTest(unittest.TestCase):
             interface_name="eth0",
             country="US",
             flag="",
+            limit_gb=500,
+            reset_type="monthly",
+            reset_day=1,
             now=datetime(2026, 6, 30, 11, 11, tzinfo=timezone.utc),
         )
 
@@ -77,6 +80,8 @@ class VpsTrafficApiTest(unittest.TestCase):
         self.assertEqual(payload["rx_bytes"], 40000000000)
         self.assertEqual(payload["tx_bytes"], 48300000000)
         self.assertEqual(payload["country"], "US")
+        self.assertEqual(payload["limit_gb"], 500)
+        self.assertEqual(payload["reset"], {"type": "monthly", "day": 1})
         self.assertEqual(payload["updated_at"], "2026-06-30T11:11:00+00:00")
         self.assertEqual(payload["source"], "vnstat-month")
 
@@ -86,6 +91,9 @@ class VpsTrafficApiTest(unittest.TestCase):
             interface_name="",
             country="",
             flag="⚠️",
+            limit_gb=0,
+            reset_type="monthly",
+            reset_day=1,
             now=datetime(2026, 6, 30, 11, 11, tzinfo=timezone.utc),
         )
 
@@ -98,6 +106,10 @@ class VpsTrafficApiTest(unittest.TestCase):
             interface_name="eth0",
             country="US",
             flag="",
+            limit_gb=500,
+            reset_type="rolling",
+            reset_start="2026-06-11",
+            reset_days=30,
             period_start="2026-06-11",
             period_days=30,
             now=datetime(2026, 6, 30, 11, 11, tzinfo=timezone.utc),
@@ -105,7 +117,25 @@ class VpsTrafficApiTest(unittest.TestCase):
 
         self.assertEqual(payload["rx_bytes"], 400)
         self.assertEqual(payload["tx_bytes"], 600)
+        self.assertEqual(payload["reset"], {"type": "rolling", "start": "2026-06-11", "days": 30})
         self.assertEqual(payload["source"], "vnstat-rolling")
+
+    def test_build_payload_can_sum_monthly_reset_day_from_daily_entries(self):
+        payload = vps_traffic_api.build_payload(
+            self.sample_vnstat(),
+            interface_name="eth0",
+            country="US",
+            flag="",
+            limit_gb=1000,
+            reset_type="monthly",
+            reset_day=11,
+            now=datetime(2026, 6, 30, 11, 11, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(payload["rx_bytes"], 400)
+        self.assertEqual(payload["tx_bytes"], 600)
+        self.assertEqual(payload["reset"], {"type": "monthly", "day": 11})
+        self.assertEqual(payload["source"], "vnstat-monthly-day")
 
     def test_missing_current_month_returns_zero_payload_for_new_vnstat_database(self):
         payload = vps_traffic_api.build_payload(
@@ -113,6 +143,9 @@ class VpsTrafficApiTest(unittest.TestCase):
             interface_name="eth0",
             country="US",
             flag="",
+            limit_gb=0,
+            reset_type="monthly",
+            reset_day=1,
             now=datetime(2026, 7, 1, tzinfo=timezone.utc),
         )
 

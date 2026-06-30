@@ -1,10 +1,10 @@
 #!name=VPS 流量面板
-#!desc=在 Surge 信息面板中显示多台 VPS 双向流量、剩余配额、使用率和重置倒计时。配置请使用 VPS_CONFIG_B64。
+#!desc=在 Surge 信息面板中显示多台 VPS 双向流量、剩余配额、使用率和重置倒计时。额度和重置周期在 VPS 端配置。
 #!system=ios
-#!arguments=VPS_CONFIG_B64=
+#!arguments=VPS1_NAME=;VPS1_HOST=;VPS1_PORT=8787;VPS1_HTTPS=;VPS2_NAME=;VPS2_HOST=;VPS2_PORT=8787;VPS2_HTTPS=;VPS3_NAME=;VPS3_HOST=;VPS3_PORT=8787;VPS3_HTTPS=
 
 [Panel]
-VPS流量 = title="VPS 流量总览",content="请在 VPS_CONFIG_B64 中填写 VPS 配置",style=info,script-name=vps-traffic-panel,update-interval=3600
+VPS流量 = title="VPS 流量总览",content="请填写 VPS1_NAME 和 VPS1_HOST",style=info,script-name=vps-traffic-panel,update-interval=3600
 
 [Script]
-vps-traffic-panel = type=generic,timeout=30,argument="VPS_CONFIG_B64=%VPS_CONFIG_B64%",script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/vps-traffic-panel.js
+vps-traffic-panel = type=generic,timeout=30,argument="VPS1_NAME=%VPS1_NAME%;VPS1_HOST=%VPS1_HOST%;VPS1_PORT=%VPS1_PORT%;VPS1_HTTPS=%VPS1_HTTPS%;VPS2_NAME=%VPS2_NAME%;VPS2_HOST=%VPS2_HOST%;VPS2_PORT=%VPS2_PORT%;VPS2_HTTPS=%VPS2_HTTPS%;VPS3_NAME=%VPS3_NAME%;VPS3_HOST=%VPS3_HOST%;VPS3_PORT=%VPS3_PORT%;VPS3_HTTPS=%VPS3_HTTPS%",script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/vps-traffic-panel.js

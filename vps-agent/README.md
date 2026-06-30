@@ -1,6 +1,6 @@
 # VPS Traffic API
 
-This tiny agent exposes current-month `vnStat` traffic as JSON for the Surge VPS traffic panel.
+This tiny agent exposes `vnStat` traffic and server-side quota settings as JSON for the Surge VPS traffic panel.
 
 ## Quick Install
 
@@ -16,24 +16,33 @@ The installer will:
 - install `vnstat`, `python3`, and `curl`;
 - guess the default network interface;
 - try to detect the VPS country;
-- generate a token and print it at the end;
+- ask for traffic quota and reset cycle;
 - create and start the `vps-traffic-api` systemd service.
+
+The interactive setup asks:
+
+- traffic quota in GB, for example `500`;
+- reset type:
+  - calendar month, resets on the 1st;
+  - monthly billing day, for example resets on the 6th;
+  - rolling period, for example every 30 days after activation;
+- reset day or rolling start date when needed.
 
 Optional overrides:
 
 ```bash
-sudo TOKEN=change-me COUNTRY=US INTERFACE=eth0 PORT=8787 bash /tmp/vps-traffic-install.sh
+sudo LIMIT_GB=500 RESET_TYPE=monthly RESET_DAY=6 INTERFACE=eth0 PORT=8787 bash /tmp/vps-traffic-install.sh
 ```
 
-Most VPS only need the simple two-command install. Use the optional form only when the interface guess is wrong, or when you want a fixed token.
+Most VPS only need the simple two-command install. Use the optional form only when the interface guess is wrong, or when you want to skip the prompts.
 
 After install, test:
 
 ```bash
-curl 'http://127.0.0.1:8787/traffic?token=<printed-token>'
+curl 'http://127.0.0.1:8787/traffic'
 ```
 
-Use the printed `VPS1_HOST`, `VPS1_PORT`, and `VPS1_TOKEN` values in the Surge private module.
+Use the printed `VPS1_HOST` and `VPS1_PORT` values in the Surge module. When using Tailscale, set `VPS1_HOST` to the Tailscale IP or MagicDNS name.
 
 ## Manual Install
 
@@ -59,13 +68,16 @@ vnstat --json
 ```bash
 VPS_TRAFFIC_INTERFACE=eth0 \
 VPS_TRAFFIC_COUNTRY=US \
+VPS_TRAFFIC_LIMIT_GB=500 \
+VPS_TRAFFIC_RESET_TYPE=monthly \
+VPS_TRAFFIC_RESET_DAY=6 \
 python3 vps_traffic_api.py --once
 ```
 
 Expected output:
 
 ```json
-{"rx_bytes":40000000000,"tx_bytes":48300000000,"interface":"eth0","updated_at":"2026-06-30T11:11:00+00:00","source":"vnstat-month","country":"US"}
+{"rx_bytes":40000000000,"tx_bytes":48300000000,"interface":"eth0","updated_at":"2026-06-30T11:11:00+00:00","source":"vnstat-monthly-day","limit_gb":500,"reset":{"type":"monthly","day":6},"country":"US"}
 ```
 
 ## 3. Run HTTP API
@@ -73,29 +85,25 @@ Expected output:
 ```bash
 VPS_TRAFFIC_INTERFACE=eth0 \
 VPS_TRAFFIC_COUNTRY=US \
-VPS_TRAFFIC_TOKEN=change-me \
+VPS_TRAFFIC_LIMIT_GB=500 \
+VPS_TRAFFIC_RESET_TYPE=monthly \
+VPS_TRAFFIC_RESET_DAY=6 \
 python3 vps_traffic_api.py --host 127.0.0.1 --port 8787
 ```
 
 Request:
 
 ```bash
-curl 'http://127.0.0.1:8787/traffic?token=change-me'
+curl 'http://127.0.0.1:8787/traffic'
 ```
 
-For a rolling billing period, the Surge panel automatically appends `period_start` and `period_days` to the request URL when the VPS config uses `reset.type = "rolling"`:
+For a rolling billing period, configure the VPS service with `VPS_TRAFFIC_RESET_TYPE=rolling`, `VPS_TRAFFIC_RESET_START=YYYY-MM-DD`, and `VPS_TRAFFIC_RESET_DAYS=30`. The API calculates the current period itself:
 
 ```bash
-curl 'http://127.0.0.1:8787/traffic?token=change-me&period_start=2026-06-11&period_days=30'
+curl 'http://127.0.0.1:8787/traffic'
 ```
 
 In this mode the agent sums `vnStat` daily entries in the current rolling period.
-
-The token may also be sent as:
-
-```text
-Authorization: Bearer change-me
-```
 
 ## 4. systemd Service
 
@@ -110,7 +118,9 @@ After=network-online.target vnstat.service
 Type=simple
 Environment=VPS_TRAFFIC_INTERFACE=eth0
 Environment=VPS_TRAFFIC_COUNTRY=US
-Environment=VPS_TRAFFIC_TOKEN=change-me
+Environment=VPS_TRAFFIC_LIMIT_GB=500
+Environment=VPS_TRAFFIC_RESET_TYPE=monthly
+Environment=VPS_TRAFFIC_RESET_DAY=6
 ExecStart=/usr/bin/python3 /opt/vps-traffic/vps_traffic_api.py --host 127.0.0.1 --port 8787
 Restart=always
 RestartSec=3
@@ -129,17 +139,18 @@ sudo systemctl status vps-traffic-api
 
 ## 5. Expose Safely
 
-The agent binds to `127.0.0.1` by default. Put it behind Caddy, Nginx, Cloudflare Tunnel, or another HTTPS reverse proxy before using it from Surge.
+The installer binds to `0.0.0.0:8787` so Surge can reach it over a private network. Prefer Tailscale IP or MagicDNS names and avoid exposing this port to the public internet.
 
 Example Surge config URL:
 
 ```text
-https://vps1.example.com/traffic?token=change-me
+http://vps1.tailnet.ts.net:8787/traffic
 ```
 
 ## Notes
 
 - `rx_bytes` is download traffic.
 - `tx_bytes` is upload traffic.
-- Without `period_start`, the API returns current calendar month traffic from `vnStat`.
-- With `period_start` and `period_days`, the API sums `vnStat` daily entries for the current rolling period.
+- `limit_gb` and `reset` are configured on the VPS and returned by this API.
+- Calendar-month reset uses vnStat monthly data.
+- Monthly billing-day and rolling-period reset use vnStat daily data for the current billing period.

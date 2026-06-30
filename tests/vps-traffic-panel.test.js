@@ -139,7 +139,7 @@ test("renders multiple VPS traffic rows with reset countdown and dot progress", 
   assert.strictEqual(donePayload.style, "alert");
 });
 
-test("returns configuration error when VPS_CONFIG_B64 is missing", () => {
+test("returns configuration error when no VPS host arguments are present", () => {
   const source = fs.readFileSync(scriptPath, "utf8");
   let donePayload;
 
@@ -152,8 +152,35 @@ test("returns configuration error when VPS_CONFIG_B64 is missing", () => {
   }, { filename: scriptPath });
 
   assert.strictEqual(donePayload.title, "VPS 流量配置缺失");
-  assert.match(donePayload.content, /VPS_CONFIG_B64/);
+  assert.match(donePayload.content, /VPS1_NAME/);
   assert.strictEqual(donePayload.style, "error");
+});
+
+test("renders simple server-side configured VPS rows without token", () => {
+  const { donePayload, requestedUrls } = runPanelWithArgument({
+    argument: [
+      "VPS1_NAME=US-1446",
+      "VPS1_HOST=us-1446.tailnet.ts.net",
+      "VPS1_PORT=8787"
+    ].join(";"),
+    responses: {
+      "http://us-1446.tailnet.ts.net:8787/traffic": {
+        body: JSON.stringify({
+          country: "US",
+          rx_bytes: 40000000000,
+          tx_bytes: 48300000000,
+          limit_gb: 500,
+          reset: { type: "monthly", day: 6 }
+        })
+      }
+    }
+  });
+
+  assert.deepStrictEqual(requestedUrls, [
+    "http://us-1446.tailnet.ts.net:8787/traffic"
+  ]);
+  assert.match(donePayload.content, /🇺🇸 US-1446 剩余411\.70G 6天后重置/);
+  assert.match(donePayload.content, /88\.3\/500G  17\.7%  ●●○○○○○○○○/);
 });
 
 test("renders VPS rows from readable indexed arguments", () => {
@@ -236,10 +263,10 @@ test("simple host arguments omit default port for https", () => {
   ]);
 });
 
-test("module declares VPS_CONFIG_B64 argument", () => {
+test("module declares simple VPS host arguments", () => {
   const moduleSource = fs.readFileSync(modulePath, "utf8");
 
-  assert.match(moduleSource, /^#!arguments=VPS_CONFIG_B64=/m);
+  assert.match(moduleSource, /^#!arguments=VPS1_NAME=;VPS1_HOST=;VPS1_PORT=8787/m);
   assert.match(moduleSource, /script-name=vps-traffic-panel/);
-  assert.match(moduleSource, /argument="VPS_CONFIG_B64=%VPS_CONFIG_B64%"/);
+  assert.match(moduleSource, /VPS1_HOST=%VPS1_HOST%/);
 });
