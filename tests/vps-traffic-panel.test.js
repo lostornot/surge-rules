@@ -5,6 +5,7 @@ const vm = require("vm");
 const test = require("node:test");
 
 const scriptPath = path.join(__dirname, "..", "scripts", "vps-traffic-panel.js");
+const scriptV2Path = path.join(__dirname, "..", "scripts", "vps-traffic-panel-v2.js");
 const modulePath = path.join(__dirname, "..", "modules", "vps-traffic-panel.sgmodule");
 
 function base64UrlJson(value) {
@@ -312,5 +313,6 @@ test("module declares simple VPS host arguments", () => {
   assert.match(moduleSource, /^#!arguments=VPS=$/m);
   assert.match(moduleSource, /script-name=vps-traffic-panel-v2/);
   assert.match(moduleSource, /argument="VPS=%VPS%"/);
-  assert.match(moduleSource, /vps-traffic-panel\.js\?v=2/);
+  assert.match(moduleSource, /scripts\/vps-traffic-panel-v2\.js/);
+  assert.ok(fs.existsSync(scriptV2Path));
 });
