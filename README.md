@@ -43,3 +43,59 @@ http://jms-panel.test/set?url=你的JMS API链接
 ### 说明
 
 `update-interval=3600` 表示 Surge 进入策略选择页面时，最多每 3600 秒自动刷新一次；也可以手动点刷新。
+
+## VPS 流量面板
+
+用途：在 Surge 信息面板里显示多台 VPS 的双向流量总览。
+
+### 文件
+
+- `modules/vps-traffic-panel.sgmodule`
+- `scripts/vps-traffic-panel.js`
+
+### VPS API 返回格式
+
+每台 VPS 暴露一个 JSON API，返回上传和下载字节数：
+
+```json
+{
+  "rx_bytes": 40000000000,
+  "tx_bytes": 48300000000,
+  "country": "US",
+  "updated_at": "2026-06-30T11:11:00+08:00"
+}
+```
+
+`country` 可选；如果返回 `flag`，面板会优先使用 `flag`。
+
+### Surge 配置格式
+
+把配置 JSON 转成 base64url 后，填入 `VPS_CONFIG_B64`。配置示例：
+
+```json
+{
+  "vps": [
+    {
+      "name": "JMS S5 NL",
+      "url": "https://vps1.example.com/traffic",
+      "limit_gb": 500,
+      "reset": { "type": "monthly", "day": 16 }
+    },
+    {
+      "name": "BWG DC6",
+      "url": "https://vps2.example.com/traffic",
+      "limit_gb": 1000,
+      "reset": { "type": "rolling", "start": "2026-06-11", "days": 30 }
+    }
+  ]
+}
+```
+
+显示示例：
+
+```text
+VPS 流量总览｜更新 11:11
+
+🇺🇸 JMS S5 NL 剩余411.70G 16天后重置
+88.3/500G  17.7%  ●●○○○○○○○○
+```
