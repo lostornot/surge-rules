@@ -92,16 +92,18 @@ function loadConfig() {
     const resetType = args[`${prefix}RESET_TYPE`] || "monthly";
     const item = {
       name,
-      url,
-      limit_gb: toNumber(args[`${prefix}LIMIT_GB`]),
-      reset: { type: resetType }
+      url
     };
 
-    if (resetType === "rolling") {
-      item.reset.start = args[`${prefix}RESET_START`];
-      item.reset.days = toNumber(args[`${prefix}RESET_DAYS`]) || 30;
-    } else {
-      item.reset.day = toNumber(args[`${prefix}RESET_DAY`]) || 1;
+    if (args[`${prefix}LIMIT_GB`]) item.limit_gb = toNumber(args[`${prefix}LIMIT_GB`]);
+    if (args[`${prefix}RESET_TYPE`]) {
+      item.reset = { type: resetType };
+      if (resetType === "rolling") {
+        item.reset.start = args[`${prefix}RESET_START`];
+        item.reset.days = toNumber(args[`${prefix}RESET_DAYS`]) || 30;
+      } else {
+        item.reset.day = toNumber(args[`${prefix}RESET_DAY`]) || 1;
+      }
     }
 
     vps.push(item);
@@ -217,6 +219,11 @@ function renderRows(items, now) {
 
     const usedGB = decimalGB(item.rxBytes + item.txBytes);
     const limitGB = toNumber(item.limit_gb);
+    if (!(limitGB > 0)) {
+      maxPercent = Math.max(maxPercent, 100);
+      return `⚠️ ${item.name || "VPS"} 配置缺失\nVPS 服务端未配置流量额度`;
+    }
+
     const leftGB = Math.max(limitGB - usedGB, 0);
     const percent = limitGB > 0 ? usedGB / limitGB * 100 : 0;
     maxPercent = Math.max(maxPercent, percent);
@@ -241,7 +248,7 @@ function renderPanel() {
   try {
     config = loadConfig();
   } catch (e) {
-    donePanel("VPS 流量配置错误", `VPS_CONFIG_B64 解析失败：${String(e)}`, "error", "exclamationmark.triangle.fill");
+    donePanel("VPS 流量配置错误", `模块参数解析失败：${String(e)}`, "error", "exclamationmark.triangle.fill");
     return;
   }
 
@@ -249,7 +256,7 @@ function renderPanel() {
   if (!servers.length) {
     donePanel(
       "VPS 流量配置缺失",
-      "未读取到 VPS_CONFIG_B64，或配置中没有 vps 数组。",
+      "请至少填写 VPS1_NAME 和 VPS1_HOST；额度和重置周期在 VPS 安装脚本里配置。",
       "error",
       "exclamationmark.triangle.fill"
     );
@@ -300,6 +307,8 @@ function renderPanel() {
       finishOne(index, Object.assign({}, item, {
         rxBytes,
         txBytes,
+        limit_gb: json.limit_gb || item.limit_gb,
+        reset: json.reset || item.reset,
         country: json.country || item.country,
         flag: json.flag || item.flag
       }));
