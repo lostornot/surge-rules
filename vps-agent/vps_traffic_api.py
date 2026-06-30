@@ -202,15 +202,7 @@ class TrafficHandler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": "not found"})
             return
 
-        token = self.server.token  # type: ignore[attr-defined]
         query = parse_qs(parsed.query)
-        if token:
-            supplied = query.get("token", [""])[0]
-            auth_header = self.headers.get("Authorization", "")
-            bearer = auth_header.removeprefix("Bearer ").strip()
-            if supplied != token and bearer != token:
-                self.send_json(403, {"error": "forbidden"})
-                return
 
         try:
             payload = build_payload(
@@ -254,7 +246,6 @@ def make_server(
     server.interface = interface  # type: ignore[attr-defined]
     server.country = country  # type: ignore[attr-defined]
     server.flag = flag  # type: ignore[attr-defined]
-    server.token = token  # type: ignore[attr-defined]
     server.limit_gb = limit_gb  # type: ignore[attr-defined]
     server.reset_type = reset_type  # type: ignore[attr-defined]
     server.reset_day = reset_day  # type: ignore[attr-defined]
