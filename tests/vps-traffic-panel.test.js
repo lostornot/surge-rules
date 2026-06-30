@@ -310,6 +310,7 @@ test("module declares simple VPS host arguments", () => {
   const moduleSource = fs.readFileSync(modulePath, "utf8");
 
   assert.match(moduleSource, /^#!arguments=VPS=$/m);
-  assert.match(moduleSource, /script-name=vps-traffic-panel/);
+  assert.match(moduleSource, /script-name=vps-traffic-panel-v2/);
   assert.match(moduleSource, /argument="VPS=%VPS%"/);
+  assert.match(moduleSource, /vps-traffic-panel\.js\?v=2/);
 });
