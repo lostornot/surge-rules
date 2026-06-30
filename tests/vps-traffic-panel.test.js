@@ -7,6 +7,7 @@ const test = require("node:test");
 const legacyScriptPath = path.join(__dirname, "..", "scripts", "vps-traffic-panel.js");
 const scriptPath = path.join(__dirname, "..", "scripts", "vps-traffic-panel-v2.js");
 const modulePath = path.join(__dirname, "..", "modules", "vps-traffic-panel.sgmodule");
+const moduleV3Path = path.join(__dirname, "..", "modules", "vps-traffic-panel-v3.sgmodule");
 
 function base64UrlJson(value) {
   return Buffer.from(JSON.stringify(value), "utf8")
@@ -383,4 +384,14 @@ test("module declares simple VPS host arguments", () => {
   assert.match(moduleSource, /scripts\/vps-traffic-panel-v2\.js/);
   assert.ok(fs.existsSync(scriptPath));
   assert.ok(fs.existsSync(legacyScriptPath));
+});
+
+test("v3 module uses raw VPS argument and a dedicated script", () => {
+  const moduleSource = fs.readFileSync(moduleV3Path, "utf8");
+
+  assert.match(moduleSource, /^#!name=VPS 流量面板 V3$/m);
+  assert.match(moduleSource, /^#!arguments=VPS=US-1446%2C100\.79\.53\.68$/m);
+  assert.match(moduleSource, /script-name=vps-traffic-panel-v3/);
+  assert.match(moduleSource, /argument="%VPS%"/);
+  assert.match(moduleSource, /scripts\/vps-traffic-panel-v3\.js/);
 });

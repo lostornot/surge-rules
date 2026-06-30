@@ -1,0 +1,10 @@
+#!name=VPS 流量面板 V3
+#!desc=在 Surge 信息面板中显示多台 VPS 双向流量。填法：名字,地址；多台用 | 分隔。额度和重置周期在 VPS 端配置。
+#!system=ios
+#!arguments=VPS=US-1446%2C100.79.53.68
+
+[Panel]
+VPS流量V3 = title="VPS 流量总览",content="请填写 VPS，例如：US-1446,100.79.53.68",style=info,script-name=vps-traffic-panel-v3,update-interval=3600
+
+[Script]
+vps-traffic-panel-v3 = type=generic,timeout=30,argument="%VPS%",script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/vps-traffic-panel-v3.js
