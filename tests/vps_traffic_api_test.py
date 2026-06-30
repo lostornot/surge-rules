@@ -157,6 +157,36 @@ class VpsTrafficApiTest(unittest.TestCase):
         body = vps_traffic_api.json_bytes({"flag": "🇺🇸", "rx_bytes": 1})
         self.assertEqual(json.loads(body.decode("utf-8"))["flag"], "🇺🇸")
 
+    def test_make_server_ignores_legacy_token_argument(self):
+        class FakeServer:
+            def __init__(self, address, handler):
+                self.address = address
+                self.handler = handler
+
+        original_server = vps_traffic_api.ThreadingHTTPServer
+        vps_traffic_api.ThreadingHTTPServer = FakeServer
+
+        try:
+            server = vps_traffic_api.make_server(
+                "127.0.0.1",
+                0,
+                "eth0",
+                "US",
+                "",
+                "legacy-token",
+                500,
+                "monthly",
+                1,
+                "",
+                30,
+            )
+        finally:
+            vps_traffic_api.ThreadingHTTPServer = original_server
+
+        self.assertFalse(hasattr(server, "token"))
+        self.assertEqual(server.interface, "eth0")
+        self.assertEqual(server.limit_gb, 500)
+
 
 if __name__ == "__main__":
     unittest.main()
