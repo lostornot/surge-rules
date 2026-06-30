@@ -80,7 +80,7 @@ test("renders multiple VPS traffic rows with reset countdown and dot progress", 
           tx_bytes: 48300000000
         })
       },
-      "https://vps2.example/traffic": {
+      "https://vps2.example/traffic?period_start=2026-06-11&period_days=30": {
         body: JSON.stringify({
           flag: "⚠️",
           rx_bytes: 500000000000,
@@ -92,7 +92,7 @@ test("renders multiple VPS traffic rows with reset countdown and dot progress", 
 
   assert.deepStrictEqual(requestedUrls, [
     "https://vps1.example/traffic",
-    "https://vps2.example/traffic"
+    "https://vps2.example/traffic?period_start=2026-06-11&period_days=30"
   ]);
   assert.strictEqual(donePayload.title, "VPS 流量总览｜更新 11:11");
   assert.match(donePayload.content, /🇺🇸 JMS S5 NL 剩余411\.70G 16天后重置/);
