@@ -4,7 +4,7 @@
 #!arguments=VPS=
 
 [Panel]
-VPS流量 = title="VPS 流量总览",content="请填写 VPS，例如：US-1446,100.79.53.68",style=info,script-name=vps-traffic-panel,update-interval=3600
+VPS流量 = title="VPS 流量总览",content="请填写 VPS，例如：US-1446,100.79.53.68",style=info,script-name=vps-traffic-panel-v2,update-interval=3600
 
 [Script]
-vps-traffic-panel = type=generic,timeout=30,argument="VPS=%VPS%",script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/vps-traffic-panel.js
+vps-traffic-panel-v2 = type=generic,timeout=30,argument="VPS=%VPS%",script-path=https://raw.githubusercontent.com/lostornot/surge-rules/main/scripts/vps-traffic-panel.js?v=2
