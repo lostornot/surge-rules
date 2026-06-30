@@ -1,0 +1,232 @@
+// VPS Traffic Panel for Surge
+// Fetches multiple VPS traffic endpoints and renders a compact monthly/rolling quota overview.
+
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function decimalGB(bytes) {
+  return bytes / 1000000000;
+}
+
+function formatGB(value, digits) {
+  if (!Number.isFinite(value)) return "未知";
+  return `${value.toFixed(digits)}G`;
+}
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
+
+function nowText(d) {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function parseArgument(arg) {
+  const result = {};
+  String(arg || "").split(/[&;\n]/).forEach(pair => {
+    const idx = pair.indexOf("=");
+    if (idx === -1) return;
+    result[pair.slice(0, idx).trim()] = pair.slice(idx + 1).trim();
+  });
+  return result;
+}
+
+function base64UrlToUtf8(input) {
+  let b64 = String(input || "").replace(/-/g, "+").replace(/_/g, "/");
+  while (b64.length % 4) b64 += "=";
+
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  let binary = "";
+  let buffer = 0;
+  let bits = 0;
+
+  for (let i = 0; i < b64.length; i++) {
+    const ch = b64.charAt(i);
+    if (ch === "=") break;
+    const value = alphabet.indexOf(ch);
+    if (value === -1) continue;
+    buffer = (buffer << 6) | value;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      binary += String.fromCharCode((buffer >> bits) & 0xff);
+    }
+  }
+
+  let escaped = "";
+  for (let i = 0; i < binary.length; i++) {
+    escaped += `%${(`00${binary.charCodeAt(i).toString(16)}`).slice(-2)}`;
+  }
+  return decodeURIComponent(escaped);
+}
+
+function loadConfig() {
+  const args = parseArgument(typeof $argument === "undefined" ? "" : $argument);
+  const encoded = args.VPS_CONFIG_B64 || args.vps_config_b64 || "";
+  if (!encoded) return null;
+  return JSON.parse(base64UrlToUtf8(encoded));
+}
+
+function countryToFlag(country) {
+  const code = String(country || "").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code)) return "";
+  const base = 127397;
+  return String.fromCodePoint(code.charCodeAt(0) + base, code.charCodeAt(1) + base);
+}
+
+function progressBar(percent, width) {
+  const filled = Math.max(0, Math.min(width, Math.round(percent / 100 * width)));
+  return "●".repeat(filled) + "○".repeat(width - filled);
+}
+
+function daysBetween(start, end) {
+  const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  return Math.max(0, Math.ceil((endDay.getTime() - startDay.getTime()) / 86400000));
+}
+
+function nextMonthlyReset(now, day) {
+  const resetDay = Math.max(1, Math.min(28, Math.floor(toNumber(day) || 1)));
+  let next = new Date(now.getFullYear(), now.getMonth(), resetDay);
+  if (next <= now) next = new Date(now.getFullYear(), now.getMonth() + 1, resetDay);
+  return next;
+}
+
+function nextRollingReset(now, start, days) {
+  const periodDays = Math.max(1, Math.floor(toNumber(days) || 30));
+  let next = new Date(`${start}T00:00:00`);
+  while (next <= now) {
+    next = new Date(next.getFullYear(), next.getMonth(), next.getDate() + periodDays);
+  }
+  return next;
+}
+
+function resetText(item, now) {
+  if (!item.reset) return "";
+  let next;
+  if (item.reset.type === "rolling") {
+    next = nextRollingReset(now, item.reset.start, item.reset.days);
+  } else {
+    next = nextMonthlyReset(now, item.reset.day);
+  }
+  return `${daysBetween(now, next)}天后重置`;
+}
+
+function extractBytes(json, keys) {
+  for (const key of keys) {
+    const value = toNumber(json[key]);
+    if (Number.isFinite(value)) return value;
+  }
+  return NaN;
+}
+
+function donePanel(title, content, style, icon) {
+  const payload = { title, content };
+  if (style) payload.style = style;
+  if (icon) payload.icon = icon;
+  $done(payload);
+}
+
+function renderRows(items, now) {
+  let maxPercent = 0;
+  const rows = items.map(item => {
+    if (item.error) {
+      maxPercent = Math.max(maxPercent, 100);
+      return `⚠️ ${item.name || "VPS"} 查询失败\n${item.error}`;
+    }
+
+    const usedGB = decimalGB(item.rxBytes + item.txBytes);
+    const limitGB = toNumber(item.limit_gb);
+    const leftGB = Math.max(limitGB - usedGB, 0);
+    const percent = limitGB > 0 ? usedGB / limitGB * 100 : 0;
+    maxPercent = Math.max(maxPercent, percent);
+
+    const flag = item.flag || countryToFlag(item.country) || "🌐";
+    const reset = resetText(item, now);
+    const header = `${flag} ${item.name} 剩余${formatGB(leftGB, 2)}${reset ? ` ${reset}` : ""}`;
+    const usage = `${usedGB.toFixed(1)}/${formatGB(limitGB, 0)}  ${percent.toFixed(1)}%  ${progressBar(percent, 10)}`;
+    return `${header}\n${usage}`;
+  });
+
+  let style = "good";
+  if (maxPercent >= 90) style = "error";
+  else if (maxPercent >= 70) style = "alert";
+  else if (maxPercent >= 50) style = "info";
+
+  return { content: rows.join("\n\n"), style };
+}
+
+function renderPanel() {
+  let config;
+  try {
+    config = loadConfig();
+  } catch (e) {
+    donePanel("VPS 流量配置错误", `VPS_CONFIG_B64 解析失败：${String(e)}`, "error", "exclamationmark.triangle.fill");
+    return;
+  }
+
+  const servers = config && Array.isArray(config.vps) ? config.vps : [];
+  if (!servers.length) {
+    donePanel(
+      "VPS 流量配置缺失",
+      "未读取到 VPS_CONFIG_B64，或配置中没有 vps 数组。",
+      "error",
+      "exclamationmark.triangle.fill"
+    );
+    return;
+  }
+
+  const now = new Date();
+  const results = new Array(servers.length);
+  let pending = servers.length;
+
+  function finishOne(index, partial) {
+    results[index] = partial;
+    pending -= 1;
+    if (pending > 0) return;
+
+    const rendered = renderRows(results, now);
+    donePanel(`VPS 流量总览｜更新 ${nowText(now)}`, rendered.content, rendered.style, "server.rack");
+  }
+
+  servers.forEach((item, index) => {
+    $httpClient.get({ url: item.url, timeout: item.timeout || 10, "auto-redirect": true }, (error, response, data) => {
+      if (error) {
+        finishOne(index, Object.assign({}, item, { error: `请求失败：${String(error)}` }));
+        return;
+      }
+
+      const status = response ? response.status : "Unknown";
+      if (!response || status < 200 || status >= 300) {
+        finishOne(index, Object.assign({}, item, { error: `HTTP ${status}` }));
+        return;
+      }
+
+      let json;
+      try {
+        json = JSON.parse(data);
+      } catch (_) {
+        finishOne(index, Object.assign({}, item, { error: "返回内容不是 JSON" }));
+        return;
+      }
+
+      const rxBytes = extractBytes(json, ["rx_bytes", "rx", "download_bytes", "down_bytes"]);
+      const txBytes = extractBytes(json, ["tx_bytes", "tx", "upload_bytes", "up_bytes"]);
+      if (!Number.isFinite(rxBytes) || !Number.isFinite(txBytes)) {
+        finishOne(index, Object.assign({}, item, { error: "缺少 rx_bytes/tx_bytes" }));
+        return;
+      }
+
+      finishOne(index, Object.assign({}, item, {
+        rxBytes,
+        txBytes,
+        country: json.country || item.country,
+        flag: json.flag || item.flag
+      }));
+    });
+  });
+}
+
+renderPanel();
