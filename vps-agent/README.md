@@ -31,15 +31,15 @@ The interactive setup asks:
 Optional overrides:
 
 ```bash
-sudo LIMIT_GB=500 RESET_TYPE=monthly RESET_DAY=6 INTERFACE=eth0 PORT=8787 bash /tmp/vps-traffic-install.sh
+sudo TOKEN='CHANGE_ME' LIMIT_GB=500 RESET_TYPE=monthly RESET_DAY=6 INTERFACE=eth0 PORT=8787 bash /tmp/vps-traffic-install.sh
 ```
 
-Most VPS only need the simple two-command install. Use the optional form only when the interface guess is wrong, or when you want to skip the prompts.
+Most VPS only need the simple two-command install. Use the optional form when the interface guess is wrong, when you want to skip the prompts, or when the API is reachable beyond a trusted private network.
 
 After install, test:
 
 ```bash
-curl 'http://127.0.0.1:8787/traffic'
+curl 'http://127.0.0.1:8787/traffic?token=CHANGE_ME'
 ```
 
 In the Surge module, fill the single `VPS` field:
@@ -100,19 +100,20 @@ VPS_TRAFFIC_COUNTRY=US \
 VPS_TRAFFIC_LIMIT_GB=500 \
 VPS_TRAFFIC_RESET_TYPE=monthly \
 VPS_TRAFFIC_RESET_DAY=6 \
+VPS_TRAFFIC_TOKEN=CHANGE_ME \
 python3 vps_traffic_api.py --host 127.0.0.1 --port 8787
 ```
 
 Request:
 
 ```bash
-curl 'http://127.0.0.1:8787/traffic'
+curl 'http://127.0.0.1:8787/traffic?token=CHANGE_ME'
 ```
 
 For a rolling billing period, configure the VPS service with `VPS_TRAFFIC_RESET_TYPE=rolling`, `VPS_TRAFFIC_RESET_START=YYYY-MM-DD`, and `VPS_TRAFFIC_RESET_DAYS=30`. The API calculates the current period itself:
 
 ```bash
-curl 'http://127.0.0.1:8787/traffic'
+curl 'http://127.0.0.1:8787/traffic?token=CHANGE_ME'
 ```
 
 In this mode the agent sums `vnStat` daily entries in the current rolling period.
@@ -133,6 +134,7 @@ Environment=VPS_TRAFFIC_COUNTRY=US
 Environment=VPS_TRAFFIC_LIMIT_GB=500
 Environment=VPS_TRAFFIC_RESET_TYPE=monthly
 Environment=VPS_TRAFFIC_RESET_DAY=6
+Environment=VPS_TRAFFIC_TOKEN=CHANGE_ME
 ExecStart=/usr/bin/python3 /opt/vps-traffic/vps_traffic_api.py --host 127.0.0.1 --port 8787
 Restart=always
 RestartSec=3
@@ -151,12 +153,12 @@ sudo systemctl status vps-traffic-api
 
 ## 5. Expose Safely
 
-The installer binds to `0.0.0.0:8787` so Surge can reach it over a private network. Prefer Tailscale IP or MagicDNS names and avoid exposing this port to the public internet.
+The installer binds to `0.0.0.0:8787` so Surge can reach it over a private network. Prefer Tailscale IP or MagicDNS names, configure `TOKEN`, and avoid exposing this port to the public internet. When a token is configured, the API accepts it as `?token=...` or `Authorization: Bearer ...`.
 
 Example Surge config URL:
 
 ```text
-http://vps1.tailnet.ts.net:8787/traffic
+http://vps1.tailnet.ts.net:8787/traffic?token=CHANGE_ME
 ```
 
 ## Notes

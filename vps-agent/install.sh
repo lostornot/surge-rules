@@ -9,6 +9,7 @@ PORT="${PORT:-8787}"
 INTERFACE="${INTERFACE:-}"
 COUNTRY="${COUNTRY:-}"
 FLAG="${FLAG:-}"
+TOKEN="${TOKEN:-}"
 LIMIT_GB="${LIMIT_GB:-}"
 RESET_TYPE="${RESET_TYPE:-}"
 RESET_DAY="${RESET_DAY:-}"
@@ -150,6 +151,7 @@ Type=simple
 Environment=VPS_TRAFFIC_INTERFACE=$INTERFACE
 Environment=VPS_TRAFFIC_COUNTRY=$COUNTRY
 Environment=VPS_TRAFFIC_FLAG=$FLAG
+Environment=VPS_TRAFFIC_TOKEN=$TOKEN
 Environment=VPS_TRAFFIC_LIMIT_GB=$LIMIT_GB
 Environment=VPS_TRAFFIC_RESET_TYPE=$RESET_TYPE
 Environment=VPS_TRAFFIC_RESET_DAY=$RESET_DAY
@@ -179,6 +181,7 @@ print_summary() {
   echo "Interface: $INTERFACE"
   echo "Country:   ${COUNTRY:-"(none)"}"
   echo "Flag:      ${FLAG:-"(none)"}"
+  echo "Token:     ${TOKEN:-"(disabled; trusted private network only)"}"
   echo "Quota:     ${LIMIT_GB} GB"
   if [ "$RESET_TYPE" = "rolling" ]; then
     echo "Reset:     every ${RESET_DAYS} days from ${RESET_START}"
@@ -188,12 +191,17 @@ print_summary() {
   echo "Listen:    http://$HOST:$PORT/traffic"
   echo
   echo "Local test:"
-  echo "curl 'http://127.0.0.1:$PORT/traffic'"
+  if [ -n "$TOKEN" ]; then
+    echo "curl 'http://127.0.0.1:$PORT/traffic?token=$TOKEN'"
+  else
+    echo "curl 'http://127.0.0.1:$PORT/traffic'"
+  fi
   echo
   echo "Surge fields:"
   echo "VPS1_NAME=<display-name>"
   echo "VPS1_HOST=<your-vps-ip-or-domain>"
   echo "VPS1_PORT=$PORT"
+  echo "VPS1_TOKEN=$TOKEN"
   echo
 }
 

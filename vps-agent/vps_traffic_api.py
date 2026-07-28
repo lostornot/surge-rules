@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
 import os
 import subprocess
@@ -15,6 +16,17 @@ from urllib.parse import parse_qs, urlparse
 
 def json_bytes(payload: dict[str, Any]) -> bytes:
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def token_is_valid(expected: str, query_token: str, authorization: str) -> bool:
+    if not expected:
+        return True
+
+    supplied = query_token
+    if authorization.startswith("Bearer "):
+        supplied = authorization.removeprefix("Bearer ").strip()
+
+    return bool(supplied) and hmac.compare_digest(expected, supplied)
 
 
 def read_vnstat_json() -> dict[str, Any]:
@@ -203,6 +215,13 @@ class TrafficHandler(BaseHTTPRequestHandler):
             return
 
         query = parse_qs(parsed.query)
+        if not token_is_valid(
+            self.server.token,  # type: ignore[attr-defined]
+            query.get("token", [""])[0],
+            self.headers.get("Authorization", ""),
+        ):
+            self.send_json(403, {"error": "forbidden"})
+            return
 
         try:
             payload = build_payload(
@@ -246,6 +265,7 @@ def make_server(
     server.interface = interface  # type: ignore[attr-defined]
     server.country = country  # type: ignore[attr-defined]
     server.flag = flag  # type: ignore[attr-defined]
+    server.token = token  # type: ignore[attr-defined]
     server.limit_gb = limit_gb  # type: ignore[attr-defined]
     server.reset_type = reset_type  # type: ignore[attr-defined]
     server.reset_day = reset_day  # type: ignore[attr-defined]

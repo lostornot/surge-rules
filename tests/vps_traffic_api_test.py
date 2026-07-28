@@ -157,7 +157,14 @@ class VpsTrafficApiTest(unittest.TestCase):
         body = vps_traffic_api.json_bytes({"flag": "🇺🇸", "rx_bytes": 1})
         self.assertEqual(json.loads(body.decode("utf-8"))["flag"], "🇺🇸")
 
-    def test_make_server_ignores_legacy_token_argument(self):
+    def test_token_is_optional_but_enforced_when_configured(self):
+        self.assertTrue(vps_traffic_api.token_is_valid("", "", ""))
+        self.assertTrue(vps_traffic_api.token_is_valid("secret", "secret", ""))
+        self.assertTrue(vps_traffic_api.token_is_valid("secret", "", "Bearer secret"))
+        self.assertFalse(vps_traffic_api.token_is_valid("secret", "", ""))
+        self.assertFalse(vps_traffic_api.token_is_valid("secret", "wrong", ""))
+
+    def test_make_server_stores_token(self):
         class FakeServer:
             def __init__(self, address, handler):
                 self.address = address
@@ -183,7 +190,7 @@ class VpsTrafficApiTest(unittest.TestCase):
         finally:
             vps_traffic_api.ThreadingHTTPServer = original_server
 
-        self.assertFalse(hasattr(server, "token"))
+        self.assertEqual(server.token, "legacy-token")
         self.assertEqual(server.interface, "eth0")
         self.assertEqual(server.limit_gb, 500)
 
