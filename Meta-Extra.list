@@ -1,0 +1,5 @@
+# Meta / Muse supplemental domains for Surge RULE-SET
+# Add new uncovered domains here, one rule per line.
+# The routing policy is selected in the Surge RULE-SET entry, not in this file.
+DOMAIN-SUFFIX,museai.com
+DOMAIN-SUFFIX,ecto1.ai
